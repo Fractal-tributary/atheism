@@ -1,0 +1,118 @@
+import type { ChannelPlugin, ChannelMeta } from "openclaw/plugin-sdk";
+import { DEFAULT_ACCOUNT_ID } from "openclaw/plugin-sdk";
+import type { A2ASpaceAccount, A2ASpaceConfig } from "./types.js";
+import { a2aSpaceOutbound } from "./outbound.js";
+
+const meta: ChannelMeta = {
+  id: "a2aspace",
+  label: "A2A Space",
+  selectionLabel: "A2A Space (Agent Collaboration)",
+  docsPath: "/channels/a2aspace",
+  docsLabel: "a2aspace",
+  blurb: "A2A Space REST API connector for agent-to-agent collaboration.",
+  aliases: ["a2a"],
+  order: 100,
+};
+
+function resolveA2AAccount(cfg: any): A2ASpaceAccount {
+  const a2aConfig = (cfg.channels?.a2aspace ?? {}) as A2ASpaceConfig;
+
+  return {
+    accountId: DEFAULT_ACCOUNT_ID,
+    enabled: a2aConfig.enabled ?? false,
+    configured: Boolean(a2aConfig.apiUrl && (a2aConfig.agentId || a2aConfig.agents?.length)),
+    config: a2aConfig,
+  };
+}
+
+export const a2aSpacePlugin: ChannelPlugin<A2ASpaceAccount> = {
+  id: "a2aspace",
+  meta: {
+    ...meta,
+  },
+  capabilities: {
+    chatTypes: ["direct"], // 人类 → Agent 的任务
+    polls: false,
+    threads: false,
+    media: false,
+    reactions: false,
+    edit: false,
+    reply: false,
+  },
+  streaming: {
+    blockStreamingCoalesceDefaults: {
+      minChars: 80,   // 80 字符就触发流式更新（更快反馈）
+      idleMs: 800,    // 0.8 秒空闲后发送（更灵敏）
+    },
+  },
+  reload: { configPrefixes: ["channels.a2aspace"] },
+  configSchema: {
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        enabled: { type: "boolean" },
+        apiUrl: { type: "string" },
+        spaceId: { type: "string" },
+        // 单 Agent 模式（向后兼容）
+        agentId: { type: "string" },
+        agentName: { type: "string" },
+        capabilities: { type: "array", items: { type: "string" } },
+        description: { type: "string" },
+        // 多 Agent 集群模式
+        agents: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              agentId: { type: "string" },
+              agentName: { type: "string" },
+              capabilities: { type: "array", items: { type: "string" } },
+              description: { type: "string" },
+            },
+            required: ["agentId"],
+          },
+        },
+        pollIntervalMs: { type: "number", minimum: 500 },
+        maxConcurrent: { type: "number", minimum: 1, maximum: 10 },
+      },
+      required: [],
+    },
+  },
+  config: {
+    listAccountIds: () => [DEFAULT_ACCOUNT_ID],
+    resolveAccount: (cfg) => resolveA2AAccount(cfg),
+    defaultAccountId: () => DEFAULT_ACCOUNT_ID,
+    isConfigured: (account) => account.configured,
+    describeAccount: (account) => ({
+      accountId: account.accountId,
+      enabled: account.enabled,
+      configured: account.configured,
+    }),
+  },
+  outbound: a2aSpaceOutbound,
+  gateway: {
+    startAccount: async (ctx) => {
+      const account = resolveA2AAccount(ctx.cfg);
+
+      if (!account.configured) {
+        ctx.log?.error("a2a-space: account not configured, cannot start");
+        return;
+      }
+
+      ctx.log?.info("a2a-space: starting monitor...");
+
+      // 启动轮询监听
+      const { monitorA2ASpace } = await import("./monitor.js");
+      await monitorA2ASpace({
+        config: ctx.cfg,
+        abortSignal: ctx.abortSignal,
+      });
+    },
+
+    stopAccount: async (ctx) => {
+      ctx.log?.info("a2a-space: stopping monitor");
+      // abortSignal 会自动停止轮询
+    },
+  },
+};

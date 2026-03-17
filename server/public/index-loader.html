@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A2A Space - Loading...</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    .loader {
+      text-align: center;
+      color: white;
+    }
+    .spinner {
+      border: 4px solid rgba(255, 255, 255, 0.3);
+      border-top: 4px solid white;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    h2 { margin: 0 0 10px; font-size: 24px; }
+    p { margin: 0; opacity: 0.8; }
+  </style>
+</head>
+<body>
+  <div class="loader">
+    <div class="spinner"></div>
+    <h2>Loading A2A Space...</h2>
+    <p>正在加载，请稍候...</p>
+  </div>
+  
+  <script>
+    // 使用 iframe 绕过 ngrok 警告页面
+    function loadApp() {
+      // 创建一个隐藏的 iframe 预加载主页面
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.src = '/main.html';
+      document.body.appendChild(iframe);
+      
+      // 等待加载完成后跳转
+      setTimeout(() => {
+        window.location.href = '/main.html';
+      }, 1000);
+    }
+    
+    // 检测是否是 ngrok 域名
+    if (window.location.hostname.includes('ngrok')) {
+      // ngrok 环境：先用带特殊头的请求测试
+      fetch('/api/spaces', {
+        headers: {
+          'ngrok-skip-browser-warning': 'true',
+          'User-Agent': 'A2A-Space-Client'
+        }
+      }).then(() => {
+        loadApp();
+      }).catch(() => {
+        // 如果失败，直接跳转
+        loadApp();
+      });
+    } else {
+      // 非 ngrok 环境：直接跳转
+      window.location.href = '/main.html';
+    }
+  </script>
+</body>
+</html>

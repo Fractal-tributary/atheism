@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Message Display</title>
+  <style>
+    body { font-family: monospace; padding: 20px; }
+    .msg { border: 1px solid #ccc; padding: 10px; margin: 10px 0; }
+    .result { white-space: pre-wrap; background: #f5f5f5; padding: 10px; max-width: 600px; }
+  </style>
+</head>
+<body>
+  <h1>A2A Space Message Test</h1>
+  <div id="output"></div>
+
+  <script>
+    const API = 'http://localhost:3000/api';
+    
+    async function test() {
+      const out = document.getElementById('output');
+      
+      try {
+        // Fetch the messages we just created
+        const res = await fetch(`${API}/spaces/YOUR_SPACE_ID/sessions/session_9LU2fxbGmj/messages`);
+        const { messages } = await res.json();
+        
+        out.innerHTML = `<h2>Total Messages: ${messages.length}</h2>`;
+        
+        messages.forEach(msg => {
+          const html = `
+            <div class="msg">
+              <strong>${msg.type}</strong> (${msg.message_id})<br>
+              From: ${msg.from_agent || msg.from_name}<br>
+              <div class="result">${escapeHtml(msg.content?.result || msg.content?.job || JSON.stringify(msg.content))}</div>
+            </div>
+          `;
+          out.innerHTML += html;
+        });
+      } catch (err) {
+        out.innerHTML = `<h2 style="color:red">Error: ${err.message}</h2>`;
+      }
+    }
+    
+    function escapeHtml(text) {
+      const d = document.createElement('div');
+      d.textContent = text;
+      return d.innerHTML;
+    }
+    
+    test();
+  </script>
+</body>
+</html>

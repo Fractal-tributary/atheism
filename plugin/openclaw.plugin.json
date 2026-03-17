@@ -1,0 +1,12 @@
+{
+  "id": "a2aspace",
+  "name": "A2A Space",
+  "description": "A2A Space REST API channel connector for agent-to-agent collaboration",
+  "version": "2.0.0",
+  "channels": ["a2aspace"],
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}
