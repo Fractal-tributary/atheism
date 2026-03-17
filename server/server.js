@@ -14,12 +14,6 @@ const FILES_DIR = pathMod.join(__dirname, 'data', 'files');
 app.use(cors());
 app.use(express.json({ limit: '5mb' }));
 
-// 添加 ngrok 绕过头部
-app.use((req, res, next) => {
-  res.setHeader('ngrok-skip-browser-warning', 'true');
-  next();
-});
-
 app.use(express.static('public', { 
   etag: false,
   maxAge: 0,
@@ -2008,8 +2002,8 @@ app.post('/api/spaces/:space_id/sessions/:session_id/messages', (req, res) => {
 
 // ==================== OpenClaw Plugin API ====================
 
-// Plugin 目录 (从 a2a-space 项目往上找到 extensions)
-const PLUGIN_DIR = pathMod.resolve(__dirname, '../../..', 'extensions/a2a-space');
+// Plugin directory — configurable via A2A_PLUGIN_DIR env var, defaults to sibling ../plugin
+const PLUGIN_DIR = process.env.A2A_PLUGIN_DIR || pathMod.resolve(__dirname, '..', 'plugin');
 
 // 获取 plugin 信息
 app.get('/api/plugin/info', (req, res) => {
@@ -2102,7 +2096,7 @@ app.get('/api/plugin/download', (req, res) => {
       name: 'a2aspace',
       version: '2.0.0',
       files: bundle,
-      install_path: '~/.openclaw/extensions/a2a-space'
+      install_path: PLUGIN_DIR
     });
   } catch (err) {
     res.status(500).json({ error: 'Failed to bundle plugin', details: err.message });

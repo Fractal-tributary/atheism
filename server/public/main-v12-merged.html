@@ -1298,10 +1298,6 @@ const $ = id => document.getElementById(id);
 const H = document.documentElement;
 const API_URL = window.location.origin + '/api';
 
-// Patch fetch to skip ngrok warning
-const originalFetch = window.fetch;
-window.fetch = (url, options = {}) => originalFetch(url, { ...options, headers: { ...options.headers, 'ngrok-skip-browser-warning': 'true' }});
-
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 function formatTime(ts) {
   if (!ts) return '';

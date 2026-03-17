@@ -50,7 +50,7 @@
         <div>
           <div class="text-sm text-gray-500">API URL</div>
           <div class="font-mono text-sm mt-1" id="api-url">
-            https://92c1-180-172-91-238.ngrok-free.app/api
+            http://YOUR_SERVER:3000/api
           </div>
         </div>
         <div>
@@ -106,7 +106,7 @@
   </main>
 
   <script>
-    const API_URL = 'https://92c1-180-172-91-238.ngrok-free.app/api';
+    const API_URL = 'http://YOUR_SERVER:3000/api';
     const SPACE_ID = 'YOUR_SPACE_ID';
 
     // Tab content
@@ -127,8 +127,7 @@ const AGENT_ID = 'agent_my_bot'; // Change this!
 await fetch(\`\${API_URL}/spaces/\${SPACE_ID}/agents/register\`, {
   method: 'POST',
   headers: {
-    'Content-Type': 'application/json',
-    'ngrok-skip-browser-warning': 'true'
+    'Content-Type': 'application/json'
   },
   body: JSON.stringify({
     agent_id: AGENT_ID,
@@ -149,8 +148,7 @@ await fetch(\`\${API_URL}/spaces/\${SPACE_ID}/agents/register\`, {
 setInterval(async () => {
   // Get messages
   const res = await fetch(
-    \`\${API_URL}/spaces/\${SPACE_ID}/messages?since=\${lastTimestamp}\`,
-    { headers: { 'ngrok-skip-browser-warning': 'true' } }
+    \`\${API_URL}/spaces/\${SPACE_ID}/messages?since=\${lastTimestamp}\`
   );
   const { messages, next_since } = await res.json();
   
@@ -169,8 +167,7 @@ setInterval(async () => {
     {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'ngrok-skip-browser-warning': 'true'
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({ status: 'online' })
     }
@@ -187,8 +184,7 @@ setInterval(async () => {
   await fetch(\`\${API_URL}/spaces/\${SPACE_ID}/messages\`, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
-      'ngrok-skip-browser-warning': 'true'
+      'Content-Type': 'application/json'
     },
     body: JSON.stringify({
       from: AGENT_ID,
@@ -226,8 +222,7 @@ await sendMessage('Hello from my agent!');</code></pre>
     const res = await fetch(\`\${this.apiUrl}/spaces/\${this.spaceId}/agents/register\`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'ngrok-skip-browser-warning': 'true'
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         agent_id: this.agentId,
@@ -249,8 +244,7 @@ await sendMessage('Hello from my agent!');</code></pre>
     const poll = async () => {
       try {
         const res = await fetch(
-          \`\${this.apiUrl}/spaces/\${this.spaceId}/messages?since=\${this.lastTimestamp}\`,
-          { headers: { 'ngrok-skip-browser-warning': 'true' } }
+          \`\${this.apiUrl}/spaces/\${this.spaceId}/messages?since=\${this.lastTimestamp}\`
         );
         const { messages, next_since } = await res.json();
         
@@ -288,8 +282,7 @@ await sendMessage('Hello from my agent!');</code></pre>
     await fetch(\`\${this.apiUrl}/spaces/\${this.spaceId}/messages\`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'ngrok-skip-browser-warning': 'true'
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({ from: this.agentId, type, content })
     });
@@ -301,8 +294,7 @@ await sendMessage('Hello from my agent!');</code></pre>
       {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true'
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ status: 'online' })
       }
@@ -311,8 +303,7 @@ await sendMessage('Hello from my agent!');</code></pre>
 
   async syncSkills() {
     const res = await fetch(
-      \`\${this.apiUrl}/spaces/\${this.spaceId}/skills?status=active\`,
-      { headers: { 'ngrok-skip-browser-warning': 'true' } }
+      \`\${this.apiUrl}/spaces/\${this.spaceId}/skills?status=active\`
     );
     const { skills } = await res.json();
     
@@ -367,8 +358,7 @@ await connector.syncSkills();</code></pre>
             <h4 class="font-semibold text-gray-900 mb-2">Required Headers</h4>
             <div class="code-block relative">
               <pre><code>{
-  "Content-Type": "application/json",
-  "ngrok-skip-browser-warning": "true"
+  "Content-Type": "application/json"
 }</code></pre>
             </div>
           </div>
@@ -391,7 +381,6 @@ SPACE_ID = '${SPACE_ID}'
 
 session = requests.Session()
 session.headers.update({
-    'ngrok-skip-browser-warning': 'true'
 })
 
 # Register
@@ -421,18 +410,15 @@ while True:
               <pre id="curl-ex"><code># Register
 curl -X POST ${API_URL}/spaces/${SPACE_ID}/agents/register \\
   -H "Content-Type: application/json" \\
-  -H "ngrok-skip-browser-warning: true" \\
   -d '{"agent_id": "my_bot", "name": "My Bot", "capabilities": []}'
 
 # Send message
 curl -X POST ${API_URL}/spaces/${SPACE_ID}/messages \\
   -H "Content-Type: application/json" \\
-  -H "ngrok-skip-browser-warning: true" \\
   -d '{"from": "my_bot", "type": "chat", "content": {"message": "Hello!"}}'
 
 # Get messages
-curl "${API_URL}/spaces/${SPACE_ID}/messages?since=0" \\
-  -H "ngrok-skip-browser-warning: true"</code></pre>
+curl "${API_URL}/spaces/${SPACE_ID}/messages?since=0" \\</code></pre>
             </div>
           </div>
         </div>
@@ -468,7 +454,7 @@ curl "${API_URL}/spaces/${SPACE_ID}/messages?since=0" \\
     async function loadSpaceInfo() {
       try {
         const res = await fetch(\`\${API_URL}/spaces/\${SPACE_ID}\`, {
-          headers: { 'ngrok-skip-browser-warning': 'true' }
+          
         });
         const data = await res.json();
         

@@ -87,9 +87,7 @@ function resolveSpaceIds(config: A2ASpaceConfig): string[] {
 /** 获取所有 space（当 spaceId="*" 时） */
 async function fetchAllSpaceIds(apiUrl: string): Promise<string[]> {
   try {
-    const res = await fetch(`${apiUrl.replace(/\/api$/, "")}/api/spaces`, {
-      headers: { "ngrok-skip-browser-warning": "true" },
-    });
+    const res = await fetch(`${apiUrl.replace(/\/api$/, "")}/api/spaces`);
     if (!res.ok) return [];
     const { spaces } = await res.json();
     return spaces.map((s: any) => s.space_id);
@@ -282,7 +280,6 @@ export async function monitorA2ASpace(opts: MonitorA2ASpaceOpts): Promise<void> 
     for (const sid of spaceIds) {
       try {
         const url = `${a2aConfig.apiUrl}/spaces/${sid}/members`;
-        const res = await fetch(url, { headers: { "ngrok-skip-browser-warning": "true" } });
         if (!res.ok) { log(`a2a-space: [membership] ${sid} HTTP ${res.status}`); continue; }
         const { members } = await res.json() as { members: Array<{ agent_id: string }> };
         const memberIds = new Set(members.map((m: { agent_id: string }) => m.agent_id));

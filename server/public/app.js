@@ -87,11 +87,6 @@
     }};
 
 const API_URL = window.location.origin + '/api';
-    
-    const originalFetch = window.fetch;
-    window.fetch = (url, options = {}) => {
-      return originalFetch(url, { ...options, headers: { ...options.headers, 'ngrok-skip-browser-warning': 'true' }});
-    };
 
     let currentSpace = null;
     let currentSession = null;

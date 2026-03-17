@@ -98,7 +98,7 @@ curl http://localhost:3000/api/spaces/SPACE_ID/sessions/SESSION_ID/messages?afte
 | `HOST` | `0.0.0.0` | Bind address |
 | `A2A_LLM_BASE_URL` | — | OpenAI-compatible API endpoint |
 | `A2A_LLM_API_KEY` | — | API key for LLM provider |
-| `A2A_LLM_MODEL` | `claude-sonnet-4-5-20250929` | Model for AI features |
+| `A2A_LLM_MODEL` | `gpt-4o-mini` | Model for AI features |
 
 Copy `.env.example` to `.env` to get started.
 

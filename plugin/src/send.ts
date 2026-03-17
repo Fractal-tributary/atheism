@@ -26,9 +26,7 @@ export async function fetchA2AMessages(params: {
   
   if (sessionId) url += `&session_id=${sessionId}`;
   
-  const res = await fetch(url, {
-    headers: { "ngrok-skip-browser-warning": "true" },
-  });
+  const res = await fetch(url);
 
   if (!res.ok) {
     throw new Error(`A2A Space API error: ${res.status} ${res.statusText}`);
@@ -56,9 +54,7 @@ export async function fetchA2ASessions(params: {
     url += `?status=${status}`;
   }
   
-  const res = await fetch(url, {
-    headers: { "ngrok-skip-browser-warning": "true" },
-  });
+  const res = await fetch(url);
 
   if (!res.ok) {
     throw new Error(`A2A Space API error: ${res.status} ${res.statusText}`);
@@ -80,7 +76,6 @@ export async function createA2ASession(params: {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "ngrok-skip-browser-warning": "true",
     },
     body: JSON.stringify({
       title,
@@ -112,7 +107,6 @@ export async function createA2AResponse(params: {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "ngrok-skip-browser-warning": "true",
     },
     body: JSON.stringify({
       from: fromAgent,
@@ -148,7 +142,6 @@ export async function updateA2AMessage(params: {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
-      "ngrok-skip-browser-warning": "true",
     },
     body: JSON.stringify({
       content: { result, streaming },
@@ -170,9 +163,7 @@ export async function fetchSessionMessages(params: {
   const { apiUrl, spaceId } = config;
 
   const url = `${apiUrl}/spaces/${spaceId}/sessions/${sessionId}/messages?limit=${limit}`;
-  const res = await fetch(url, {
-    headers: { "ngrok-skip-browser-warning": "true" },
-  });
+  const res = await fetch(url);
 
   if (!res.ok) {
     throw new Error(`A2A Space API error: ${res.status} ${res.statusText}`);
@@ -193,7 +184,6 @@ export async function deleteA2AMessage(params: {
   const url = `${apiUrl}/spaces/${spaceId}/messages/${messageId}`;
   const res = await fetch(url, {
     method: "DELETE",
-    headers: { "ngrok-skip-browser-warning": "true" },
   });
 
   // 404 = already deleted, that's fine
@@ -210,9 +200,7 @@ export async function fetchCustomRules(params: {
   const { apiUrl, spaceId } = config;
 
   const url = `${apiUrl}/spaces/${spaceId}/system-prompt`;
-  const res = await fetch(url, {
-    headers: { "ngrok-skip-browser-warning": "true" },
-  });
+  const res = await fetch(url);
 
   if (!res.ok) return "";
 
@@ -239,7 +227,6 @@ export async function claimEvalLock(params: {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "ngrok-skip-browser-warning": "true",
       },
       body: JSON.stringify({ agent_id: claimAgent }),
     });
@@ -271,7 +258,6 @@ export async function releaseEvalLock(params: {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "ngrok-skip-browser-warning": "true",
       },
       body: JSON.stringify({ agent_id: releaseAgent }),
     });
@@ -288,9 +274,7 @@ export async function fetchSessionSummary(params: {
   const { config, sessionId } = params;
   const { apiUrl, spaceId } = config;
   try {
-    const res = await fetch(`${apiUrl}/spaces/${spaceId}/sessions/${sessionId}/summary`, {
-      headers: { "ngrok-skip-browser-warning": "true" },
-    });
+    const res = await fetch(`${apiUrl}/spaces/${spaceId}/sessions/${sessionId}/summary`);
     if (!res.ok) return null;
     const { summary } = await res.json();
     return summary;
@@ -321,7 +305,6 @@ export async function updateSessionSummary(params: {
     if (title) body.title = title;
     const res = await fetch(`${apiUrl}/spaces/${spaceId}/sessions/${sessionId}/summary`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "true" },
       body: JSON.stringify(body),
     });
     return res.ok;
@@ -347,9 +330,7 @@ export async function fetchSkillDirectory(params: {
   }
   
   try {
-    const res = await fetch(`${apiUrl}/spaces/${spaceId}/skill-directory`, {
-      headers: { "ngrok-skip-browser-warning": "true" },
-    });
+    const res = await fetch(`${apiUrl}/spaces/${spaceId}/skill-directory`);
     if (!res.ok) return null;
     const data = await res.json() as { exists: boolean; content: string };
     if (!data.exists || !data.content) return null;
@@ -368,9 +349,7 @@ export async function fetchLedgerRendered(params: {
   const { config, sessionId } = params;
   const { apiUrl, spaceId } = config;
   try {
-    const res = await fetch(`${apiUrl}/spaces/${spaceId}/sessions/${sessionId}/ledger`, {
-      headers: { "ngrok-skip-browser-warning": "true" },
-    });
+    const res = await fetch(`${apiUrl}/spaces/${spaceId}/sessions/${sessionId}/ledger`);
     if (!res.ok) return null;
     const data = await res.json() as { rendered: string | null };
     return data.rendered;
@@ -396,7 +375,6 @@ export async function notifyNoReply(params: {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "ngrok-skip-browser-warning": "true",
       },
       body: JSON.stringify({ agent_id: agentId }),
     });
@@ -422,9 +400,7 @@ export async function cleanupZombieStreaming(params: {
 
   try {
     const url = `${apiUrl}/spaces/${spaceId}/messages?since=${since}&limit=200`;
-    const res = await fetch(url, {
-      headers: { "ngrok-skip-browser-warning": "true" },
-    });
+    const res = await fetch(url);
     if (!res.ok) return [];
 
     const { messages } = await res.json() as { messages: any[] };
@@ -493,7 +469,6 @@ export async function postResumeMessage(params: {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "ngrok-skip-browser-warning": "true",
       },
       body: JSON.stringify({
         from: "human",
@@ -534,9 +509,7 @@ export async function getRecentAgentJobIds(params: {
 
   try {
     const url = `${apiUrl}/spaces/${spaceId}/messages?since=${since}&limit=200`;
-    const res = await fetch(url, {
-      headers: { "ngrok-skip-browser-warning": "true" },
-    });
+    const res = await fetch(url);
     if (!res.ok) return [];
 
     const { messages } = await res.json() as { messages: any[] };

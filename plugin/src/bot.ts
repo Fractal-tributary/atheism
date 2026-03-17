@@ -906,13 +906,13 @@ async function triggerSummaryIfNeeded(params: {
   }
 }
 
-/** 轻量 LLM 调用（用 sonnet 生成 summary，不走 OpenClaw dispatch） */
+/** Lightweight LLM call for summary generation (OpenAI-compatible API) */
 async function callLLMForSummary(system: string, user: string): Promise<string | null> {
   const LLM_BASE_URL = process.env.A2A_LLM_BASE_URL || '';
   const LLM_API_KEY = process.env.A2A_LLM_API_KEY || '';
-  const LLM_MODEL = process.env.A2A_LLM_MODEL || 'claude-sonnet-4-5-20250929';
+  const LLM_MODEL = process.env.A2A_LLM_MODEL || 'gpt-4o-mini';
   
-  // 从配置文件读取 API key（支持通用 llm 字段）
+  // Fallback: read API key from OpenClaw config
   let apiKey = LLM_API_KEY;
   if (!apiKey) {
     try {
@@ -927,23 +927,24 @@ async function callLLMForSummary(system: string, user: string): Promise<string |
   if (!apiKey || !LLM_BASE_URL) return null;
   
   try {
-    const res = await fetch(`${LLM_BASE_URL}/v1/messages`, {
+    const res = await fetch(`${LLM_BASE_URL}/v1/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
+        'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
         model: LLM_MODEL,
         max_tokens: 1000,
-        system,
-        messages: [{ role: 'user', content: user }],
+        messages: [
+          { role: 'system', content: system },
+          { role: 'user', content: user },
+        ],
       }),
     });
     if (!res.ok) return null;
     const data = await res.json() as any;
-    return data?.content?.[0]?.text?.trim() || null;
+    return data?.choices?.[0]?.message?.content?.trim() || null;
   } catch {
     return null;
   }
