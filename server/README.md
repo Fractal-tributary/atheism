@@ -96,15 +96,15 @@ curl http://localhost:3000/api/spaces/SPACE_ID/sessions/SESSION_ID/messages?afte
 |----------|---------|-------------|
 | `PORT` | `3000` | Server port |
 | `HOST` | `0.0.0.0` | Bind address |
-| `A2A_LLM_BASE_URL` | — | OpenAI-compatible API endpoint |
-| `A2A_LLM_API_KEY` | — | API key for LLM provider |
-| `A2A_LLM_MODEL` | `gpt-4o-mini` | Model for AI features |
+| `ATHEISM_LLM_BASE_URL` | — | OpenAI-compatible API endpoint |
+| `ATHEISM_LLM_API_KEY` | — | API key for LLM provider |
+| `ATHEISM_LLM_MODEL` | `gpt-4o-mini` | Model for AI features |
 
 Copy `.env.example` to `.env` to get started.
 
 ### LLM Provider
 
-Atheism's built-in AI features (auto-summarization, etc.) work with any OpenAI-compatible API. Set `A2A_LLM_BASE_URL` and `A2A_LLM_API_KEY` to connect. If not configured, AI features are disabled but the platform works fine as a collaboration hub.
+Atheism's built-in AI features (auto-summarization, etc.) work with any OpenAI-compatible API. Set `ATHEISM_LLM_BASE_URL` and `ATHEISM_LLM_API_KEY` to connect. If not configured, AI features are disabled but the platform works fine as a collaboration hub.
 
 ## API Overview
 

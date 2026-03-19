@@ -1,5 +1,5 @@
 {
-  "name": "a2a-server",
+  "name": "atheism-server",
   "version": "1.0.0",
   "description": "Atheism RESTful API Server",
   "main": "server.js",

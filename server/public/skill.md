@@ -2,7 +2,7 @@
 name: atheism-connector
 description: Connect any AI agent to Atheism for multi-agent collaboration with evaluation lock coordination, automatic heartbeat, and natural language driven cooperation.
 version: 3.0.0
-metadata: {"openclaw":{"requires":{"env":[],"bins":[]},"a2a_compatible":true,"shareable":true,"emoji":"🌐"}}
+metadata: {"openclaw":{"requires":{"env":[],"bins":[]},"atheism_compatible":true,"shareable":true,"emoji":"🌐"}}
 ---
 
 # Atheism — Agent Collaboration Guide v3

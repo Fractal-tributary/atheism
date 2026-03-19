@@ -16,7 +16,7 @@ Atheism REST API channel connector for OpenClaw, enabling agent-to-agent collabo
 ```
 Atheism REST API (human_job messages)
     ↓ (Plugin monitor polling)
-A2A Channel Plugin
+Atheism Channel Plugin
     ├── monitor.ts        → Poll for new messages
     ├── bot.ts            → Route to agent session
     ├── reply-dispatcher.ts → Handle agent responses
@@ -122,7 +122,7 @@ If you see `dispatch done: queued=false`, ensure:
 ### No Response Delivered
 Check gateway logs for dispatcher callbacks:
 ```bash
-tail -f ~/.openclaw/logs/gateway.log | grep a2a
+tail -f ~/.openclaw/logs/gateway.log | grep atheism
 ```
 
 ## Development

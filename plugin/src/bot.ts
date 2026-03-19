@@ -1,8 +1,8 @@
 import type { ClawdbotConfig } from "openclaw/plugin-sdk";
 import type { AtheismMessage, AtheismConfig, ActiveJob, OnlineAgent, AgentProfile, SessionSummary } from "./types.js";
-import { createA2AResponse, fetchSessionMessages, updateAtheismMessage, deleteAtheismMessage, fetchCustomRules, fetchSessionSummary, updateSessionSummary, fetchSkillDirectory, notifyNoReply, fetchLedgerRendered } from "./send.js";
-import { getA2ARuntime } from "./runtime.js";
-import { createA2AReplyDispatcher } from "./reply-dispatcher.js";
+import { createAtheismResponse, fetchSessionMessages, updateAtheismMessage, deleteAtheismMessage, fetchCustomRules, fetchSessionSummary, updateSessionSummary, fetchSkillDirectory, notifyNoReply, fetchLedgerRendered } from "./send.js";
+import { getAtheismRuntime } from "./runtime.js";
+import { createAtheismReplyDispatcher } from "./reply-dispatcher.js";
 
 // ─── @mention 辅助 ─────────────────────────────────────────
 
@@ -243,7 +243,7 @@ ${agentList}
 - 本轮是否有未持久化的有价值产出？
 - 如果有 → 发起沉淀提议：「建议沉淀为 Skill: [名称]，由 [Agent] 负责整理。」
 - 如果没有 → 显式声明「本轮无需沉淀」
-- 实际整理工作按角色映射分配（详见 \`a2a-collaboration-protocol\` Skill 第 2 章）
+- 实际整理工作按角色映射分配（详见 \`collaboration-protocol\` Skill 第 2 章）
 
 ## 如何判断当前阶段
 
@@ -404,7 +404,7 @@ curl -s -X POST "${apiBaseUrl || 'http://localhost:3000/api'}/skills" \\
 
 **不沉淀的**：纯转述（无推断）、一次性回答（绑定当前上下文）、与已有 Skill 高度重复且无新信息。
 
-> 创建 Skill 前先查阅 \`a2a-collaboration-protocol\` Skill 的 Golden Principles（M1-M5 质量门禁 + S1-S4 建议项）。
+> 创建 Skill 前先查阅 \`collaboration-protocol\` Skill 的 Golden Principles（M1-M5 质量门禁 + S1-S4 建议项）。
 
 创建后告知协作伙伴和人类："已创建 Skill: xxx，可通过 \`curl .../skills/SKILL_ID\` 获取。"
 
@@ -580,7 +580,7 @@ export async function handleAtheismMessage(params: {
   agentProfile: AgentProfile;
 }): Promise<void> {
   const { cfg, message, config, onlineAgents = [], agentProfile } = params;
-  const core = getA2ARuntime();
+  const core = getAtheismRuntime();
   const log = console.log;
   const error = console.error;
 
@@ -682,7 +682,7 @@ export async function handleAtheismMessage(params: {
     log(`atheism: [${agentId}@${sessionId}] active jobs: space ${spaceId}=${spaceActiveCount(spaceId)}/${maxConcurrent}, global=${activeJobs.size}`);
 
     // 🆕 两步路由:
-    // Step 1: 用 agentId 做 peer.id 精确匹配 binding → 拿到正确的 agentId（a2a-coder / a2a-researcher）
+    // Step 1: 用 agentId 做 peer.id 精确匹配 binding → 拿到正确的 agentId（binding-coder / binding-researcher）
     // Step 2: 手动构建 sessionKey 包含 space+session 信息 → 不同 session 不会共享上下文
     const route = core.channel.routing.resolveAgentRoute({
       cfg, channel: "atheism", accountId: "default", peer: { kind: "direct", id: agentId },
@@ -730,7 +730,7 @@ export async function handleAtheismMessage(params: {
     // 🆕 Deferred creation callback: 当 Agent 有实质输出时，才创建 response 消息
     const createResponseCallback = deferPlaceholder
       ? async (initialText: string): Promise<string> => {
-          const id = await createA2AResponse({
+          const id = await createAtheismResponse({
             config, jobId: msgId, sessionId, initialResult: initialText, agentId,
           });
           // Update activeJob with the newly created responseId
@@ -741,7 +741,7 @@ export async function handleAtheismMessage(params: {
         }
       : undefined;
 
-    const { dispatcher, replyOptions, markDispatchIdle, markDispatchAborted: _markAborted, isCompleted, isSilent, getResponseId } = createA2AReplyDispatcher({
+    const { dispatcher, replyOptions, markDispatchIdle, markDispatchAborted: _markAborted, isCompleted, isSilent, getResponseId } = createAtheismReplyDispatcher({
       cfg, agentId: route.agentId, responseId, config,
       createResponse: createResponseCallback,
       onComplete: () => {
@@ -908,9 +908,9 @@ async function triggerSummaryIfNeeded(params: {
 
 /** Lightweight LLM call for summary generation (OpenAI-compatible API) */
 async function callLLMForSummary(system: string, user: string): Promise<string | null> {
-  const LLM_BASE_URL = process.env.A2A_LLM_BASE_URL || '';
-  const LLM_API_KEY = process.env.A2A_LLM_API_KEY || '';
-  const LLM_MODEL = process.env.A2A_LLM_MODEL || 'gpt-4o-mini';
+  const LLM_BASE_URL = process.env.ATHEISM_LLM_BASE_URL || '';
+  const LLM_API_KEY = process.env.ATHEISM_LLM_API_KEY || '';
+  const LLM_MODEL = process.env.ATHEISM_LLM_MODEL || 'gpt-4o-mini';
   
   // Fallback: read API key from OpenClaw config
   let apiKey = LLM_API_KEY;
@@ -921,7 +921,7 @@ async function callLLMForSummary(system: string, user: string): Promise<string |
       const os = await import('os');
       const configPath = path.join(os.homedir(), '.openclaw', 'openclaw.json');
       const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-      apiKey = config?.a2a?.llm?.apiKey || '';
+      apiKey = config?.atheism?.llm?.apiKey || '';
     } catch {}
   }
   if (!apiKey || !LLM_BASE_URL) return null;

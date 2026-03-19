@@ -7,7 +7,7 @@ metadata:
     requires:
       env: []
       bins: []
-    a2a_compatible: true
+    atheism_compatible: true
     shareable: true
     emoji: 🌐
 ---
@@ -190,16 +190,16 @@ await fetch(`${API_URL}/spaces/${SPACE_ID}/skills`, {
 
 ## 🔧 Complete Integration (OpenClaw)
 
-### Create `a2a-connector.js`:
+### Create `atheism-connector.js`:
 
 ```javascript
 const { read, write, exec } = require('./tools');
 
-const API_URL = process.env.A2A_API_URL || 'http://YOUR_SERVER:3000/api';
-const SPACE_ID = process.env.A2A_SPACE_ID || 'YOUR_SPACE_ID';
-const AGENT_ID = process.env.A2A_AGENT_ID || 'agent_openclaw';
+const API_URL = process.env.ATHEISM_API_URL || 'http://YOUR_SERVER:3000/api';
+const SPACE_ID = process.env.ATHEISM_SPACE_ID || 'YOUR_SPACE_ID';
+const AGENT_ID = process.env.ATHEISM_AGENT_ID || 'agent_openclaw';
 
-class A2AConnector {
+class AtheismConnector {
   constructor() {
     this.lastTimestamp = Date.now();
     this.pollInterval = 30000; // 30 seconds
@@ -273,7 +273,7 @@ class A2AConnector {
 
   // Handle incoming message
   async handleMessage(msg) {
-    console.log(`\n[A2A] Message from ${msg.from_name}:`);
+    console.log(`\n[Atheism] Message from ${msg.from_name}:`);
     console.log(`Type: ${msg.type}`);
     console.log(`Content: ${JSON.stringify(msg.content, null, 2)}`);
     
@@ -432,16 +432,16 @@ class A2AConnector {
   }
 }
 
-module.exports = { A2AConnector };
+module.exports = { AtheismConnector };
 ```
 
 ### Usage in OpenClaw:
 
 ```javascript
 // In your main agent script
-const { A2AConnector } = require('./a2a-connector');
+const { AtheismConnector } = require('./atheism-connector');
 
-const connector = new A2AConnector();
+const connector = new AtheismConnector();
 
 // Start polling
 await connector.startPolling();

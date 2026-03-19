@@ -1,9 +1,9 @@
 import type { ClawdbotConfig, ReplyPayload } from "openclaw/plugin-sdk";
 import type { AtheismConfig } from "./types.js";
 import { updateAtheismMessage } from "./send.js";
-import { getA2ARuntime } from "./runtime.js";
+import { getAtheismRuntime } from "./runtime.js";
 
-export type CreateA2AReplyDispatcherParams = {
+export type CreateAtheismReplyDispatcherParams = {
   cfg: ClawdbotConfig;
   agentId: string;
   responseId: string;  // Can be "" for deferred mode
@@ -14,8 +14,8 @@ export type CreateA2AReplyDispatcherParams = {
   onSilent?: () => Promise<void>;  // Agent 决定静默时调用
 };
 
-export function createA2AReplyDispatcher(params: CreateA2AReplyDispatcherParams) {
-  const core = getA2ARuntime();
+export function createAtheismReplyDispatcher(params: CreateAtheismReplyDispatcherParams) {
+  const core = getAtheismRuntime();
   const { cfg, agentId, config, onComplete, onSilent, createResponse } = params;
   const log = console.log;
   const error = console.error;
@@ -126,7 +126,7 @@ export function createA2AReplyDispatcher(params: CreateA2AReplyDispatcherParams)
     return parts.join("\n") || "⏳ 正在处理...";
   };
 
-  const deliverToA2A = async (text: string, streaming: boolean) => {
+  const deliverToAtheism = async (text: string, streaming: boolean) => {
     if (isCompleted) return;
     if (isSilentResponse) return;  // 🆕 Already flagged as silent, don't create messages
     
@@ -248,9 +248,9 @@ export function createA2AReplyDispatcher(params: CreateA2AReplyDispatcherParams)
         statusLine = "";  // 收到文本后清除工具状态
 
         if (kind === "final") {
-          await deliverToA2A(accumulatedText, true);
+          await deliverToAtheism(accumulatedText, true);
         } else if (kind === "block") {
-          await deliverToA2A(accumulatedText, true);
+          await deliverToAtheism(accumulatedText, true);
         }
       },
 
@@ -258,7 +258,7 @@ export function createA2AReplyDispatcher(params: CreateA2AReplyDispatcherParams)
         error(`atheism: [ERROR] (${info.kind}): ${err}`);
         hasErrorOccurred = true;
         if (!isCompleted) {
-          await deliverToA2A(`❌ 处理出错: ${String(err)}`, false);
+          await deliverToAtheism(`❌ 处理出错: ${String(err)}`, false);
         }
       },
 
@@ -309,7 +309,7 @@ export function createA2AReplyDispatcher(params: CreateA2AReplyDispatcherParams)
           }
           
           log(`atheism: [DISPATCHER] delivering final response from onIdle (${accumulatedText.length} chars after delay)`);
-          await deliverToA2A(accumulatedText, false);
+          await deliverToAtheism(accumulatedText, false);
         } else if (!isCompleted && !accumulatedText) {
           // 没有任何文本输出 → 也视为静默
           log(`atheism: [DISPATCHER] no text output, triggering silent handler`);
@@ -344,7 +344,7 @@ export function createA2AReplyDispatcher(params: CreateA2AReplyDispatcherParams)
       if (!responseId) return;
 
       const displayText = buildDisplayText();
-      deliverToA2A(displayText, true).catch((err) => {
+      deliverToAtheism(displayText, true).catch((err) => {
         error(`atheism: [TOOL] update error: ${err}`);
       });
     },
@@ -363,7 +363,7 @@ export function createA2AReplyDispatcher(params: CreateA2AReplyDispatcherParams)
       if (!responseId) return;
 
       const displayText = buildDisplayText();
-      deliverToA2A(displayText, true).catch((err) => {
+      deliverToAtheism(displayText, true).catch((err) => {
         error(`atheism: [THINKING] update error: ${err}`);
       });
     },
@@ -374,7 +374,7 @@ export function createA2AReplyDispatcher(params: CreateA2AReplyDispatcherParams)
       if (responseId && statusLine.startsWith("💭")) {
         statusLine = "📝 正在生成回复...";
         const displayText = buildDisplayText();
-        deliverToA2A(displayText, true).catch(() => {});
+        deliverToAtheism(displayText, true).catch(() => {});
       }
     },
 
@@ -384,7 +384,7 @@ export function createA2AReplyDispatcher(params: CreateA2AReplyDispatcherParams)
       if (responseId && !hasReceivedText && !statusLine) {
         statusLine = "⏳ 正在思考...";
         const displayText = buildDisplayText();
-        deliverToA2A(displayText, true).catch(() => {});
+        deliverToAtheism(displayText, true).catch(() => {});
       }
     },
 
@@ -397,7 +397,7 @@ export function createA2AReplyDispatcher(params: CreateA2AReplyDispatcherParams)
       currentPartial = text;  // Update current streaming block
       accumulatedText = getFullText();  // Full text = completed blocks + current partial
       statusLine = "";  // 有文本输出了，清除状态
-      deliverToA2A(accumulatedText, true).catch((err) => {
+      deliverToAtheism(accumulatedText, true).catch((err) => {
         error(`atheism: [PARTIAL] error: ${err}`);
       });
     },

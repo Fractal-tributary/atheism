@@ -90,7 +90,7 @@ export async function createAtheismSession(params: {
   return res.json();
 }
 
-export async function createA2AResponse(params: {
+export async function createAtheismResponse(params: {
   config: AtheismConfig;
   jobId: string;
   sessionId: string;

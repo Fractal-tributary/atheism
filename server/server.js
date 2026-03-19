@@ -592,7 +592,7 @@ app.post('/api/spaces/:space_id/messages', (req, res) => {
   const { from, type, content, session_id } = req.body;
   
   if (isDuplicateMessage(space_id, session_id || 'default', from, content)) {
-    console.log(`a2a-server: dedup: duplicate message blocked (${from}@${space_id})`);
+    console.log(`atheism-server: dedup: duplicate message blocked (${from}@${space_id})`);
     return res.status(200).json({ message_id: 'dedup', session_id: session_id || 'session_default', deduplicated: true });
   }
 
@@ -607,7 +607,7 @@ app.post('/api/spaces/:space_id/messages', (req, res) => {
       m.content?.job_id === content.job_id
     );
     if (existingResponse) {
-      console.log(`a2a-server: dedup: response already exists from ${from} for job ${content.job_id} (existing: ${existingResponse.message_id})`);
+      console.log(`atheism-server: dedup: response already exists from ${from} for job ${content.job_id} (existing: ${existingResponse.message_id})`);
       return res.status(200).json({ 
         message_id: existingResponse.message_id, 
         session_id: session_id || 'session_default', 
@@ -1942,7 +1942,7 @@ app.post('/api/spaces/:space_id/sessions/:session_id/messages', (req, res) => {
   const { from, type, content } = req.body;
   
   if (isDuplicateMessage(space_id, session_id, from, content)) {
-    console.log(`a2a-server: dedup: duplicate message blocked (${from}@${session_id})`);
+    console.log(`atheism-server: dedup: duplicate message blocked (${from}@${session_id})`);
     return res.status(200).json({ message_id: 'dedup', session_id, deduplicated: true });
   }
   
@@ -2002,8 +2002,8 @@ app.post('/api/spaces/:space_id/sessions/:session_id/messages', (req, res) => {
 
 // ==================== OpenClaw Plugin API ====================
 
-// Plugin directory — configurable via A2A_PLUGIN_DIR env var, defaults to sibling ../plugin
-const PLUGIN_DIR = process.env.A2A_PLUGIN_DIR || pathMod.resolve(__dirname, '..', 'plugin');
+// Plugin directory — configurable via ATHEISM_PLUGIN_DIR env var, defaults to sibling ../plugin
+const PLUGIN_DIR = process.env.ATHEISM_PLUGIN_DIR || pathMod.resolve(__dirname, '..', 'plugin');
 
 // 获取 plugin 信息
 app.get('/api/plugin/info', (req, res) => {

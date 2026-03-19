@@ -10,18 +10,18 @@ const meta: ChannelMeta = {
   docsPath: "/channels/atheism",
   docsLabel: "atheism",
   blurb: "Atheism REST API connector for agent-to-agent collaboration.",
-  aliases: ["a2a"],
+  aliases: [],
   order: 100,
 };
 
-function resolveA2AAccount(cfg: any): AtheismAccount {
-  const a2aConfig = (cfg.channels?.atheism ?? {}) as AtheismConfig;
+function resolveAtheismAccount(cfg: any): AtheismAccount {
+  const atheismConfig = (cfg.channels?.atheism ?? {}) as AtheismConfig;
 
   return {
     accountId: DEFAULT_ACCOUNT_ID,
-    enabled: a2aConfig.enabled ?? false,
-    configured: Boolean(a2aConfig.apiUrl && (a2aConfig.agentId || a2aConfig.agents?.length)),
-    config: a2aConfig,
+    enabled: atheismConfig.enabled ?? false,
+    configured: Boolean(atheismConfig.apiUrl && (atheismConfig.agentId || atheismConfig.agents?.length)),
+    config: atheismConfig,
   };
 }
 
@@ -81,7 +81,7 @@ export const atheismPlugin: ChannelPlugin<AtheismAccount> = {
   },
   config: {
     listAccountIds: () => [DEFAULT_ACCOUNT_ID],
-    resolveAccount: (cfg) => resolveA2AAccount(cfg),
+    resolveAccount: (cfg) => resolveAtheismAccount(cfg),
     defaultAccountId: () => DEFAULT_ACCOUNT_ID,
     isConfigured: (account) => account.configured,
     describeAccount: (account) => ({
@@ -93,7 +93,7 @@ export const atheismPlugin: ChannelPlugin<AtheismAccount> = {
   outbound: atheismOutbound,
   gateway: {
     startAccount: async (ctx) => {
-      const account = resolveA2AAccount(ctx.cfg);
+      const account = resolveAtheismAccount(ctx.cfg);
 
       if (!account.configured) {
         ctx.log?.error("atheism: account not configured, cannot start");

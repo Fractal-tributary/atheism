@@ -7,7 +7,7 @@ import { readFileSync, writeFileSync } from "fs";
 
 // ─── @human 暂停状态持久化（跨 Gateway 重启） ───────────────
 
-const PAUSED_SESSIONS_FILE = '/tmp/a2a-paused-sessions.json';
+const PAUSED_SESSIONS_FILE = '/tmp/atheism-paused-sessions.json';
 
 function loadPausedSessions(): Map<string, { pausedAt: number; pausedBy: string }> {
   try {
@@ -101,42 +101,58 @@ export async function monitorAtheism(opts: MonitorAtheismOpts): Promise<void> {
   const log = console.log;
   const error = console.error;
 
-  const a2aConfig = cfg.channels?.atheism as AtheismConfig | undefined;
+  const atheismConfig = cfg.channels?.atheism as AtheismConfig | undefined;
 
-  if (!a2aConfig?.enabled) {
+  if (!atheismConfig?.enabled) {
     log("atheism: channel not enabled, skipping monitor");
     return;
   }
-  if (!a2aConfig.apiUrl) {
+  if (!atheismConfig.apiUrl) {
     error("atheism: apiUrl not configured");
     return;
   }
 
   // 🆕 解析 Agent 集群
-  const agentProfiles = resolveAgentProfiles(a2aConfig);
+  const agentProfiles = resolveAgentProfiles(atheismConfig);
   if (agentProfiles.length === 0) {
     error("atheism: no agents configured (need agentId or agents[])");
     return;
   }
 
-  const pollIntervalMs = a2aConfig.pollIntervalMs ?? 1000;
-  const maxConcurrent = Math.max(1, Math.min(10, a2aConfig.maxConcurrent ?? 3));
+  const pollIntervalMs = atheismConfig.pollIntervalMs ?? 1000;
+  const maxConcurrent = Math.max(1, Math.min(10, atheismConfig.maxConcurrent ?? 3));
   setMaxConcurrent(maxConcurrent);
 
-  // ═══ Exponential Backoff & Circuit Breaker ═══
-  // 防御后端不可用时的错误风暴
+  // ═══ Per-Space Exponential Backoff & Circuit Breaker ═══
+  // 每个 space 独立退避：space A 挂了不影响 space B 的正常轮询
   const MAX_BACKOFF_MS = 60000; // 最大退避 60s
   const CIRCUIT_BREAKER_THRESHOLD = 10; // 连续 10 次失败触发熔断
   const CIRCUIT_BREAKER_RESET_MS = 60000; // 熔断后 60s 探活
-  let consecutiveFailures = 0;
-  let currentBackoffMs = pollIntervalMs;
-  let circuitOpen = false;
-  let circuitOpenedAt = 0;
+  type SpaceHealth = {
+    consecutiveFailures: number;
+    currentBackoffMs: number;
+    circuitOpen: boolean;
+    circuitOpenedAt: number;
+    lastPollAt: number;
+  };
+  const spaceHealth = new Map<string, SpaceHealth>();
+  const getSpaceHealth = (spaceId: string): SpaceHealth => {
+    if (!spaceHealth.has(spaceId)) {
+      spaceHealth.set(spaceId, {
+        consecutiveFailures: 0,
+        currentBackoffMs: pollIntervalMs,
+        circuitOpen: false,
+        circuitOpenedAt: 0,
+        lastPollAt: 0,
+      });
+    }
+    return spaceHealth.get(spaceId)!;
+  };
 
   // 解析要监听的 spaces
-  let spaceIds = resolveSpaceIds(a2aConfig);
+  let spaceIds = resolveSpaceIds(atheismConfig);
   if (spaceIds.length === 0) {
-    spaceIds = await fetchAllSpaceIds(a2aConfig.apiUrl);
+    spaceIds = await fetchAllSpaceIds(atheismConfig.apiUrl);
     if (spaceIds.length === 0) {
       error("atheism: no spaces found");
       return;
@@ -187,7 +203,7 @@ export async function monitorAtheism(opts: MonitorAtheismOpts): Promise<void> {
   for (const agent of agentProfiles) {
     for (const sid of spaceIds) {
       try {
-        const spaceConfig = { ...a2aConfig, spaceId: sid } as AtheismConfig;
+        const spaceConfig = { ...atheismConfig, spaceId: sid } as AtheismConfig;
         const cleaned = await cleanupZombieStreaming({ config: spaceConfig, agentId: agent.agentId });
         for (const { jobId, sessionId, hadContent } of cleaned) {
           if (jobId) {
@@ -215,7 +231,7 @@ export async function monitorAtheism(opts: MonitorAtheismOpts): Promise<void> {
   }
 
   // ═══ Startup step 1.5: Auto-resume — 向被中断的 session 注入恢复消息 ═══
-  const autoResume = a2aConfig.autoResume !== false; // 默认开启
+  const autoResume = atheismConfig.autoResume !== false; // 默认开启
   if (autoResume && interruptedSessions.size > 0) {
     log(`atheism: [RESUME] auto-resuming ${interruptedSessions.size} interrupted session(s)...`);
     let resumeCount = 0;
@@ -253,7 +269,7 @@ export async function monitorAtheism(opts: MonitorAtheismOpts): Promise<void> {
   for (const agent of agentProfiles) {
     for (const sid of spaceIds) {
       try {
-        const spaceConfig = { ...a2aConfig, spaceId: sid } as AtheismConfig;
+        const spaceConfig = { ...atheismConfig, spaceId: sid } as AtheismConfig;
         const jobIds = await getRecentAgentJobIds({ config: spaceConfig, agentId: agent.agentId });
         for (const jobId of jobIds) {
           markMessageProcessed(agent.agentId, jobId);
@@ -271,9 +287,9 @@ export async function monitorAtheism(opts: MonitorAtheismOpts): Promise<void> {
     if (now - lastMembershipRefresh < MEMBERSHIP_REFRESH_MS) return;
     
     // 🆕 动态发现新 space（spaceId="*" 时）
-    if (resolveSpaceIds(a2aConfig!).length === 0) {
+    if (resolveSpaceIds(atheismConfig!).length === 0) {
       try {
-        const allIds = await fetchAllSpaceIds(a2aConfig!.apiUrl!);
+        const allIds = await fetchAllSpaceIds(atheismConfig!.apiUrl!);
         for (const sid of allIds) {
           if (!spaceIds.includes(sid)) {
             spaceIds.push(sid);
@@ -289,7 +305,7 @@ export async function monitorAtheism(opts: MonitorAtheismOpts): Promise<void> {
     let success = false;
     for (const sid of spaceIds) {
       try {
-        const url = `${a2aConfig.apiUrl}/spaces/${sid}/members`;
+        const url = `${atheismConfig.apiUrl}/spaces/${sid}/members`;
         const res = await fetch(url);
         if (!res.ok) { log(`atheism: [membership] ${sid} HTTP ${res.status}`); continue; }
         const { members } = await res.json() as { members: Array<{ agent_id: string }> };
@@ -324,22 +340,6 @@ export async function monitorAtheism(opts: MonitorAtheismOpts): Promise<void> {
     const poll = async () => {
       if (abortSignal?.aborted) { resolve(); return; }
 
-      // ═══ Circuit Breaker Check ═══
-      if (circuitOpen) {
-        const elapsed = Date.now() - circuitOpenedAt;
-        if (elapsed < CIRCUIT_BREAKER_RESET_MS) {
-          // 熔断中，跳过本轮
-          setTimeout(poll, CIRCUIT_BREAKER_RESET_MS - elapsed + 1000);
-          return;
-        }
-        // 探活：重置熔断，尝试一次
-        log("atheism: [circuit-breaker] attempting recovery probe...");
-        circuitOpen = false;
-      }
-
-      let pollHadSuccess = false;
-      let pollHadFailure = false;
-
       // 🆕 刷新 membership 缓存
       await refreshMembership();
 
@@ -350,12 +350,27 @@ export async function monitorAtheism(opts: MonitorAtheismOpts): Promise<void> {
 
 
         for (const spaceId of spaceIds) {
+          // ═══ Per-Space Circuit Breaker Check ═══
+          const health = getSpaceHealth(spaceId);
+          const now = Date.now();
+          if (health.circuitOpen) {
+            const elapsed = now - health.circuitOpenedAt;
+            if (elapsed < CIRCUIT_BREAKER_RESET_MS) {
+              continue; // 该 space 熔断中，跳过（不影响其他 space）
+            }
+            log(`atheism: [circuit-breaker] ${spaceId}: attempting recovery probe...`);
+            health.circuitOpen = false;
+          }
+          // Per-space backoff: 如果距上次 poll 不够退避间隔，跳过
+          if (now - health.lastPollAt < health.currentBackoffMs) continue;
+
           // 🆕 只在已加入的 space 工作（发心跳 + 处理消息）
           // 如果缓存存在且非空，才做过滤；缓存为空（首次/失败）则全部放行
           const agentSpaces = membershipCache.get(agentId);
           if (agentSpaces && agentSpaces.size > 0 && !agentSpaces.has(spaceId)) continue;
           try {
-            const spaceConfig = { ...a2aConfig, spaceId } as AtheismConfig;
+            health.lastPollAt = now;
+            const spaceConfig = { ...atheismConfig, spaceId } as AtheismConfig;
             const tsKey = `${agentId}:${spaceId}`;
             const since = lastTimestamps.get(tsKey) || Date.now();
 
@@ -608,38 +623,30 @@ export async function monitorAtheism(opts: MonitorAtheismOpts): Promise<void> {
             }
             // 🆕 标记首轮 poll 完成，后续 poll 允许 completion signal
             firstPollDone.add(tsKey);
-            pollHadSuccess = true;
+            // ═══ Per-Space Backoff: 成功 → 重置 ═══
+            if (health.consecutiveFailures > 0) {
+              log(`atheism: [backoff] ${spaceId}: recovered after ${health.consecutiveFailures} failures`);
+            }
+            health.consecutiveFailures = 0;
+            health.currentBackoffMs = pollIntervalMs;
           } catch (err) {
             error(`atheism: [${agentId}@${spaceId}] poll error: ${err}`);
-            pollHadFailure = true;
+            // ═══ Per-Space Backoff: 失败 → 退避 ═══
+            health.consecutiveFailures++;
+            health.currentBackoffMs = Math.min(health.currentBackoffMs * 2, MAX_BACKOFF_MS);
+            if (health.consecutiveFailures >= CIRCUIT_BREAKER_THRESHOLD) {
+              health.circuitOpen = true;
+              health.circuitOpenedAt = Date.now();
+              log(`atheism: [circuit-breaker] ${spaceId}: OPEN after ${health.consecutiveFailures} failures, probe in ${CIRCUIT_BREAKER_RESET_MS/1000}s`);
+            } else {
+              log(`atheism: [backoff] ${spaceId}: failed (${health.consecutiveFailures}x), next in ${health.currentBackoffMs}ms`);
+            }
           }
         }
       }
 
-      // ═══ Backoff & Circuit Breaker Logic ═══
-      if (pollHadFailure && !pollHadSuccess) {
-        // 全部失败（后端可能挂了）
-        consecutiveFailures++;
-        currentBackoffMs = Math.min(currentBackoffMs * 2, MAX_BACKOFF_MS);
-        
-        if (consecutiveFailures >= CIRCUIT_BREAKER_THRESHOLD) {
-          circuitOpen = true;
-          circuitOpenedAt = Date.now();
-          log(`atheism: [circuit-breaker] OPEN after ${consecutiveFailures} consecutive failures, will probe in ${CIRCUIT_BREAKER_RESET_MS/1000}s`);
-        } else {
-          log(`atheism: [backoff] poll failed (${consecutiveFailures}x), next attempt in ${currentBackoffMs}ms`);
-        }
-      } else if (pollHadSuccess) {
-        // 至少部分成功，重置退避
-        if (consecutiveFailures > 0) {
-          log(`atheism: [backoff] recovered after ${consecutiveFailures} failures`);
-        }
-        consecutiveFailures = 0;
-        currentBackoffMs = pollIntervalMs;
-      }
-
       if (!abortSignal?.aborted) {
-        setTimeout(poll, currentBackoffMs);
+        setTimeout(poll, pollIntervalMs);
       } else {
         resolve();
       }

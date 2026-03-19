@@ -1,7 +1,7 @@
 import type { OpenClawPluginApi } from "openclaw/plugin-sdk";
 import { emptyPluginConfigSchema } from "openclaw/plugin-sdk";
 import { atheismPlugin } from "./src/channel.js";
-import { setA2ARuntime } from "./src/runtime.js";
+import { setAtheismRuntime } from "./src/runtime.js";
 
 console.log("[atheism] Loading plugin...");
 
@@ -15,7 +15,7 @@ const plugin = {
     console.log("[atheism] register() called");
     
     // 设置 runtime
-    setA2ARuntime(api.runtime);
+    setAtheismRuntime(api.runtime);
     
     // 注册 channel
     api.registerChannel({ plugin: atheismPlugin });
