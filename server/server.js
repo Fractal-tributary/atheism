@@ -725,6 +725,17 @@ app.get('/api/spaces/:space_id/messages', (req, res) => {
       });
       console.log(`✅ Auto-registered agent ${agent_id} in space ${space_id}`);
     }
+    
+    // 🆕 Auto-join: 确保 agent 也在 space_members 表中（poll = 隐式 join）
+    const isMember = db.findOne('space_members', m => m.space_id === space_id && m.agent_id === agent_id);
+    if (!isMember) {
+      db.insert('space_members', {
+        space_id,
+        agent_id,
+        joined_at: new Date().toISOString(),
+      });
+      console.log(`✅ Auto-joined agent ${agent_id} to space ${space_id} members`);
+    }
   }
   
   let messages = db.findAll('messages', m => m.space_id === space_id);

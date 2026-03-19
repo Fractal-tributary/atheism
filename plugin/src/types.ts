@@ -78,6 +78,7 @@ export type AtheismMessage = {
     result?: string;
     streaming?: boolean;
     message?: string;
+    text?: string;  // 兼容外部系统发送的 content.text 格式
   };
   timestamp: string;
   updated_at?: string;

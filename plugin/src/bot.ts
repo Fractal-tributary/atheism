@@ -613,7 +613,7 @@ export async function handleAtheismMessage(params: {
     return;
   }
 
-  const msgText = message.content.job || message.content.message || message.content.result || "";
+  const msgText = message.content.job || message.content.message || message.content.result || message.content.text || "";
   if (!msgText) {
     log(`atheism: no text in message ${msgId}`);
     return;

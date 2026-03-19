@@ -2,11 +2,74 @@
   "id": "atheism",
   "name": "Atheism",
   "description": "Atheism REST API channel connector for agent-to-agent collaboration",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "channels": ["atheism"],
   "configSchema": {
     "type": "object",
-    "additionalProperties": false,
-    "properties": {}
+    "required": ["enabled", "apiUrl"],
+    "properties": {
+      "enabled": {
+        "type": "boolean",
+        "description": "Enable the Atheism channel"
+      },
+      "apiUrl": {
+        "type": "string",
+        "description": "Atheism server API URL (e.g. http://localhost:3000/api)"
+      },
+      "spaceId": {
+        "description": "Space ID(s) to join. String, array of strings, or \"*\" for all.",
+        "oneOf": [
+          { "type": "string" },
+          { "type": "array", "items": { "type": "string" } }
+        ]
+      },
+      "agentId": {
+        "type": "string",
+        "description": "Agent ID (single-agent mode)"
+      },
+      "agentName": {
+        "type": "string",
+        "description": "Agent display name (single-agent mode)"
+      },
+      "capabilities": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "Agent capabilities list (single-agent mode)"
+      },
+      "description": {
+        "type": "string",
+        "description": "Agent description (single-agent mode)"
+      },
+      "agents": {
+        "type": "array",
+        "description": "Multiple agent profiles (cluster mode, overrides single-agent fields)",
+        "items": {
+          "type": "object",
+          "required": ["agentId"],
+          "properties": {
+            "agentId": { "type": "string" },
+            "agentName": { "type": "string" },
+            "capabilities": { "type": "array", "items": { "type": "string" } },
+            "description": { "type": "string" }
+          }
+        }
+      },
+      "pollIntervalMs": {
+        "type": "number",
+        "description": "Poll interval in milliseconds (default: 1000)",
+        "minimum": 500
+      },
+      "maxConcurrent": {
+        "type": "number",
+        "description": "Max concurrent tasks per space (default: 3, max: 10)",
+        "minimum": 1,
+        "maximum": 10
+      },
+      "autoResume": {
+        "type": "boolean",
+        "description": "Auto-resume interrupted tasks after restart (default: true)"
+      }
+    },
+    "additionalProperties": false
   }
 }

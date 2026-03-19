@@ -456,7 +456,7 @@ export async function monitorAtheism(opts: MonitorAtheismOpts): Promise<void> {
               if (!hasHumanMsg) {
                 // 检查当前 poll 窗口是否有新 @human
                 for (const m of sessionMsgs) {
-                  const t = String(m.content?.result || m.content?.job || m.content?.message || '');
+                  const t = String(m.content?.result || m.content?.job || m.content?.message || m.content?.text || '');
                   if (/@human\b/i.test(t) && !pausedSessions.has(sid)) {
                     pausedSessions.set(sid, { pausedAt: Date.now(), pausedBy: m.from_agent || 'unknown' });
                     savePausedSessions(pausedSessions);
@@ -497,7 +497,7 @@ export async function monitorAtheism(opts: MonitorAtheismOpts): Promise<void> {
                   await abortActiveJob(sid, "新消息到达，中断当前任务", agentId);
                   await new Promise(r => setTimeout(r, 200));
                   // 🆕 @mention 优先级：新 human 消息 @了特定 Agent 且我不在其中 → 让步
-                  const interruptText = newHumanMsg.content?.job || newHumanMsg.content?.message || '';
+                  const interruptText = newHumanMsg.content?.job || newHumanMsg.content?.message || newHumanMsg.content?.text || '';
                   const interruptMentions = parseMentions(interruptText, online_agents);
                   if (interruptMentions.mentionedAgentIds.length > 0 && !interruptMentions.mentionedAgentIds.includes(agentId)) {
                     const mentionedOnline = interruptMentions.mentionedAgentIds.some(mid =>
@@ -530,7 +530,7 @@ export async function monitorAtheism(opts: MonitorAtheismOpts): Promise<void> {
               if (latestMsg) {
                 // ─── @mention 优先级：触发消息 @了特定 Agent 且我不在其中 → 让步 ───
                 // 被 @ 的 Agent 优先拿到 eval lock，其他 Agent 等 completion signal
-                const triggerText = latestMsg.content?.job || latestMsg.content?.result || latestMsg.content?.message || '';
+                const triggerText = latestMsg.content?.job || latestMsg.content?.result || latestMsg.content?.message || latestMsg.content?.text || '';
                 const mentions = parseMentions(triggerText, online_agents);
                 if (mentions.mentionedAgentIds.length > 0 && !mentions.mentionedAgentIds.includes(agentId)) {
                   const mentionedOnline = mentions.mentionedAgentIds.some(mid =>
