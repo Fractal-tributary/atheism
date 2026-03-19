@@ -1,7 +1,7 @@
 {
   "name": "a2a-server",
   "version": "1.0.0",
-  "description": "A2A Space RESTful API Server",
+  "description": "Atheism RESTful API Server",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

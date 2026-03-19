@@ -1,13 +1,13 @@
 import type { ClawdbotConfig, ReplyPayload } from "openclaw/plugin-sdk";
-import type { A2ASpaceConfig } from "./types.js";
-import { updateA2AMessage } from "./send.js";
+import type { AtheismConfig } from "./types.js";
+import { updateAtheismMessage } from "./send.js";
 import { getA2ARuntime } from "./runtime.js";
 
 export type CreateA2AReplyDispatcherParams = {
   cfg: ClawdbotConfig;
   agentId: string;
   responseId: string;  // Can be "" for deferred mode
-  config: A2ASpaceConfig;
+  config: AtheismConfig;
   /** Callback to create response on first substantive output (deferred mode) */
   createResponse?: (initialText: string) => Promise<string>;
   onComplete?: () => void;
@@ -133,7 +133,7 @@ export function createA2AReplyDispatcher(params: CreateA2AReplyDispatcherParams)
     // 🆕 Defense-in-depth: don't create deferred response for text matching silent patterns
     // Catches cases where onPartialReply streams "NO" before deliver() can flag it
     if (!responseId && createResponse && isSilentText(text)) {
-      log(`a2a-space: [DELIVER] preventing deferred response creation for silent text: "${text}"`);
+      log(`atheism: [DELIVER] preventing deferred response creation for silent text: "${text}"`);
       return;
     }
     
@@ -145,18 +145,18 @@ export function createA2AReplyDispatcher(params: CreateA2AReplyDispatcherParams)
       responseCreateInProgress = true;
       try {
         responseId = await createResponse(text);
-        log(`a2a-space: [DELIVER] deferred response created: ${responseId}`);
+        log(`atheism: [DELIVER] deferred response created: ${responseId}`);
         // createResponse already sets the initial text, so for streaming we're done
         if (!streaming) {
           // Final delivery — need to mark as complete
-          log(`a2a-space: [DELIVER] ✅ FINAL response delivered (deferred, ${text.length} chars)`);
+          log(`atheism: [DELIVER] ✅ FINAL response delivered (deferred, ${text.length} chars)`);
           isCompleted = true;
           onComplete?.();
         }
         return;
       } catch (err) {
         responseCreateInProgress = false;
-        error(`a2a-space: [DELIVER] failed to create deferred response: ${err}`);
+        error(`atheism: [DELIVER] failed to create deferred response: ${err}`);
         return;
       }
     }
@@ -186,7 +186,7 @@ export function createA2AReplyDispatcher(params: CreateA2AReplyDispatcherParams)
     updateInProgress = true;
 
     try {
-      await updateA2AMessage({
+      await updateAtheismMessage({
         config,
         messageId: responseId,
         result: text,
@@ -194,12 +194,12 @@ export function createA2AReplyDispatcher(params: CreateA2AReplyDispatcherParams)
       });
       
       if (!streaming) {
-        log(`a2a-space: [DELIVER] ✅ FINAL response delivered (${text.length} chars)`);
+        log(`atheism: [DELIVER] ✅ FINAL response delivered (${text.length} chars)`);
         isCompleted = true;
         onComplete?.();
       }
     } catch (err) {
-      error(`a2a-space: [DELIVER] error: ${err}`);
+      error(`atheism: [DELIVER] error: ${err}`);
     } finally {
       updateInProgress = false;
     }
@@ -222,7 +222,7 @@ export function createA2AReplyDispatcher(params: CreateA2AReplyDispatcherParams)
         hasReceivedText = true;
         lastDeliverTime = Date.now();
         if (kind === "final") receivedFinalKind = true;
-        log(`a2a-space: [DELIVER] (${kind}) #${finalDeliveryCount}: ${text.substring(0, 100)}${text.length > 100 ? "..." : ""}`);
+        log(`atheism: [DELIVER] (${kind}) #${finalDeliveryCount}: ${text.substring(0, 100)}${text.length > 100 ? "..." : ""}`);
 
         // 🆕 Early silent detection: prevent creating deferred messages for NO_REPLY/NO
         // This is critical for deferred mode (completion signals) where deliver() would
@@ -230,7 +230,7 @@ export function createA2AReplyDispatcher(params: CreateA2AReplyDispatcherParams)
         // Must check BEFORE accumulating text, so onIdle sees empty accumulated text
         // and triggers the silent handler path cleanly.
         if (isSilentText(text)) {
-          log(`a2a-space: [DELIVER] silent text detected ("${text}"), flagging as silent — no message will be created`);
+          log(`atheism: [DELIVER] silent text detected ("${text}"), flagging as silent — no message will be created`);
           isSilentResponse = true;
           return;
         }
@@ -255,7 +255,7 @@ export function createA2AReplyDispatcher(params: CreateA2AReplyDispatcherParams)
       },
 
       onError: async (err, info) => {
-        error(`a2a-space: [ERROR] (${info.kind}): ${err}`);
+        error(`atheism: [ERROR] (${info.kind}): ${err}`);
         hasErrorOccurred = true;
         if (!isCompleted) {
           await deliverToA2A(`❌ 处理出错: ${String(err)}`, false);
@@ -265,33 +265,33 @@ export function createA2AReplyDispatcher(params: CreateA2AReplyDispatcherParams)
       onIdle: async () => {
         // 🆕 Bug 1+2 fix: 如果已经被 ABORT，不再 deliver，避免覆盖 abortActiveJob 写入的 ⚡ 标记
         if (aborted) {
-          log(`a2a-space: [DISPATCHER] onIdle skipped — job was aborted`);
+          log(`atheism: [DISPATCHER] onIdle skipped — job was aborted`);
           return;
         }
         
         // 🆕 Early exit if deliver() already flagged as silent (e.g., "NO" detected in deliver callback)
         if (isSilentResponse && !isCompleted) {
-          log(`a2a-space: [DISPATCHER] onIdle: deliver flagged silent, triggering silent handler`);
+          log(`atheism: [DISPATCHER] onIdle: deliver flagged silent, triggering silent handler`);
           isCompleted = true;
           await onSilent?.();
           return;
         }
         
         accumulatedText = getFullText();  // Ensure we have the full accumulated text
-        log(`a2a-space: [DISPATCHER] onIdle (accumulated ${accumulatedText.length} chars, completed=${isCompleted}, finalKind=${receivedFinalKind}, error=${hasErrorOccurred}, responseId=${!!responseId})`);
+        log(`atheism: [DISPATCHER] onIdle (accumulated ${accumulatedText.length} chars, completed=${isCompleted}, finalKind=${receivedFinalKind}, error=${hasErrorOccurred}, responseId=${!!responseId})`);
         // 延迟 600ms，等待可能的后续 deliver() 调用
         await new Promise(resolve => setTimeout(resolve, 600));
         
         // 🆕 再检查一次，600ms 期间可能被 abort
         if (aborted) {
-          log(`a2a-space: [DISPATCHER] onIdle skipped after delay — job was aborted`);
+          log(`atheism: [DISPATCHER] onIdle skipped after delay — job was aborted`);
           return;
         }
         
         if (!isCompleted && accumulatedText) {
           // 检测是否为静默响应
           if (isSilentText(accumulatedText)) {
-            log(`a2a-space: [DISPATCHER] detected NO_REPLY, triggering silent handler`);
+            log(`atheism: [DISPATCHER] detected NO_REPLY, triggering silent handler`);
             isSilentResponse = true;
             isCompleted = true;
             await onSilent?.();
@@ -303,16 +303,16 @@ export function createA2AReplyDispatcher(params: CreateA2AReplyDispatcherParams)
             const truncation = detectTruncation(accumulatedText);
             if (truncation.truncated) {
               const annotation = '\n\n---\n⚠️ *此回复未正常完成（生成过程异常中断），可能需要其他 Agent 补完。*';
-              log(`a2a-space: [DISPATCHER] truncation detected (no final kind received), annotating response`);
+              log(`atheism: [DISPATCHER] truncation detected (no final kind received), annotating response`);
               accumulatedText += annotation;
             }
           }
           
-          log(`a2a-space: [DISPATCHER] delivering final response from onIdle (${accumulatedText.length} chars after delay)`);
+          log(`atheism: [DISPATCHER] delivering final response from onIdle (${accumulatedText.length} chars after delay)`);
           await deliverToA2A(accumulatedText, false);
         } else if (!isCompleted && !accumulatedText) {
           // 没有任何文本输出 → 也视为静默
-          log(`a2a-space: [DISPATCHER] no text output, triggering silent handler`);
+          log(`atheism: [DISPATCHER] no text output, triggering silent handler`);
           isSilentResponse = true;
           isCompleted = true;
           await onSilent?.();
@@ -320,7 +320,7 @@ export function createA2AReplyDispatcher(params: CreateA2AReplyDispatcherParams)
       },
 
       onCleanup: () => {
-        log(`a2a-space: [DISPATCHER] onCleanup`);
+        log(`atheism: [DISPATCHER] onCleanup`);
       },
     });
 
@@ -334,7 +334,7 @@ export function createA2AReplyDispatcher(params: CreateA2AReplyDispatcherParams)
       const toolName = payload.name || "unknown";
       const phase = payload.phase || "";
       
-      log(`a2a-space: [TOOL] ${toolName} (phase: ${phase})`);
+      log(`atheism: [TOOL] ${toolName} (phase: ${phase})`);
       
       const label = getToolLabel(toolName);
       toolCallHistory.push(label.split(" ").slice(1).join(" ").replace("...", ""));
@@ -345,7 +345,7 @@ export function createA2AReplyDispatcher(params: CreateA2AReplyDispatcherParams)
 
       const displayText = buildDisplayText();
       deliverToA2A(displayText, true).catch((err) => {
-        error(`a2a-space: [TOOL] update error: ${err}`);
+        error(`atheism: [TOOL] update error: ${err}`);
       });
     },
 
@@ -355,7 +355,7 @@ export function createA2AReplyDispatcher(params: CreateA2AReplyDispatcherParams)
       const text = payload.text?.trim();
       if (!text) return;
 
-      log(`a2a-space: [THINKING] ${text.substring(0, 60)}...`);
+      log(`atheism: [THINKING] ${text.substring(0, 60)}...`);
       
       statusLine = `💭 正在思考...\n> ${text.length > 100 ? text.substring(0, 100) + "..." : text}`;
 
@@ -364,13 +364,13 @@ export function createA2AReplyDispatcher(params: CreateA2AReplyDispatcherParams)
 
       const displayText = buildDisplayText();
       deliverToA2A(displayText, true).catch((err) => {
-        error(`a2a-space: [THINKING] update error: ${err}`);
+        error(`atheism: [THINKING] update error: ${err}`);
       });
     },
 
     // 💭 推理结束
     onReasoningEnd: () => {
-      log(`a2a-space: [THINKING] reasoning ended`);
+      log(`atheism: [THINKING] reasoning ended`);
       if (responseId && statusLine.startsWith("💭")) {
         statusLine = "📝 正在生成回复...";
         const displayText = buildDisplayText();
@@ -380,7 +380,7 @@ export function createA2AReplyDispatcher(params: CreateA2AReplyDispatcherParams)
 
     // 📝 新的 assistant 消息开始
     onAssistantMessageStart: () => {
-      log(`a2a-space: [MSG] new assistant message start`);
+      log(`atheism: [MSG] new assistant message start`);
       if (responseId && !hasReceivedText && !statusLine) {
         statusLine = "⏳ 正在思考...";
         const displayText = buildDisplayText();
@@ -398,7 +398,7 @@ export function createA2AReplyDispatcher(params: CreateA2AReplyDispatcherParams)
       accumulatedText = getFullText();  // Full text = completed blocks + current partial
       statusLine = "";  // 有文本输出了，清除状态
       deliverToA2A(accumulatedText, true).catch((err) => {
-        error(`a2a-space: [PARTIAL] error: ${err}`);
+        error(`atheism: [PARTIAL] error: ${err}`);
       });
     },
   };
@@ -406,7 +406,7 @@ export function createA2AReplyDispatcher(params: CreateA2AReplyDispatcherParams)
   // 🆕 ABORT 感知：外部通知 dispatcher 当前 job 已被中断
   const markDispatchAborted = () => {
     aborted = true;
-    log(`a2a-space: [DISPATCHER] markDispatchAborted called — will skip onIdle delivery`);
+    log(`atheism: [DISPATCHER] markDispatchAborted called — will skip onIdle delivery`);
   };
 
   return {

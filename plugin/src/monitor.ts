@@ -1,8 +1,8 @@
 import type { ClawdbotConfig } from "openclaw/plugin-sdk";
-import type { A2ASpaceConfig, A2AMessage, OnlineAgent, EvalLock, AgentProfile } from "./types.js";
+import type { AtheismConfig, AtheismMessage, OnlineAgent, EvalLock, AgentProfile } from "./types.js";
 import { resolveAgentProfiles } from "./types.js";
-import { fetchA2AMessages, claimEvalLock, releaseEvalLock, cleanupZombieStreaming, getRecentAgentJobIds, postResumeMessage } from "./send.js";
-import { handleA2AMessage, getActiveJobForAgent, getAllActiveJobs, abortActiveJob, setMaxConcurrent, isMessageProcessed, markMessageProcessed, isAgentMentioned } from "./bot.js";
+import { fetchAtheismMessages, claimEvalLock, releaseEvalLock, cleanupZombieStreaming, getRecentAgentJobIds, postResumeMessage } from "./send.js";
+import { handleAtheismMessage, getActiveJobForAgent, getAllActiveJobs, abortActiveJob, setMaxConcurrent, isMessageProcessed, markMessageProcessed, isAgentMentioned } from "./bot.js";
 import { readFileSync, writeFileSync } from "fs";
 
 // ─── @human 暂停状态持久化（跨 Gateway 重启） ───────────────
@@ -21,7 +21,7 @@ function loadPausedSessions(): Map<string, { pausedAt: number; pausedBy: string 
 function savePausedSessions(map: Map<string, { pausedAt: number; pausedBy: string }>): void {
   try {
     writeFileSync(PAUSED_SESSIONS_FILE, JSON.stringify(Object.fromEntries(map)));
-  } catch (err) { console.error("a2a-space: [WARN] failed to save paused sessions:", err); }
+  } catch (err) { console.error("atheism: [WARN] failed to save paused sessions:", err); }
 }
 
 // ─── @mention 解析（复用 bot.ts 的 isAgentMentioned） ───
@@ -70,13 +70,13 @@ setInterval(() => {
   }
 }, 60000);
 
-export type MonitorA2ASpaceOpts = {
+export type MonitorAtheismOpts = {
   config: ClawdbotConfig;
   abortSignal?: AbortSignal;
 };
 
 /** 解析 spaceId 配置为数组 */
-function resolveSpaceIds(config: A2ASpaceConfig): string[] {
+function resolveSpaceIds(config: AtheismConfig): string[] {
   const raw = config.spaceId;
   if (!raw) return ["default"];
   if (Array.isArray(raw)) return raw;
@@ -96,26 +96,26 @@ async function fetchAllSpaceIds(apiUrl: string): Promise<string[]> {
   }
 }
 
-export async function monitorA2ASpace(opts: MonitorA2ASpaceOpts): Promise<void> {
+export async function monitorAtheism(opts: MonitorAtheismOpts): Promise<void> {
   const { config: cfg, abortSignal } = opts;
   const log = console.log;
   const error = console.error;
 
-  const a2aConfig = cfg.channels?.a2aspace as A2ASpaceConfig | undefined;
+  const a2aConfig = cfg.channels?.atheism as AtheismConfig | undefined;
 
   if (!a2aConfig?.enabled) {
-    log("a2a-space: channel not enabled, skipping monitor");
+    log("atheism: channel not enabled, skipping monitor");
     return;
   }
   if (!a2aConfig.apiUrl) {
-    error("a2a-space: apiUrl not configured");
+    error("atheism: apiUrl not configured");
     return;
   }
 
   // 🆕 解析 Agent 集群
   const agentProfiles = resolveAgentProfiles(a2aConfig);
   if (agentProfiles.length === 0) {
-    error("a2a-space: no agents configured (need agentId or agents[])");
+    error("atheism: no agents configured (need agentId or agents[])");
     return;
   }
 
@@ -123,19 +123,29 @@ export async function monitorA2ASpace(opts: MonitorA2ASpaceOpts): Promise<void> 
   const maxConcurrent = Math.max(1, Math.min(10, a2aConfig.maxConcurrent ?? 3));
   setMaxConcurrent(maxConcurrent);
 
+  // ═══ Exponential Backoff & Circuit Breaker ═══
+  // 防御后端不可用时的错误风暴
+  const MAX_BACKOFF_MS = 60000; // 最大退避 60s
+  const CIRCUIT_BREAKER_THRESHOLD = 10; // 连续 10 次失败触发熔断
+  const CIRCUIT_BREAKER_RESET_MS = 60000; // 熔断后 60s 探活
+  let consecutiveFailures = 0;
+  let currentBackoffMs = pollIntervalMs;
+  let circuitOpen = false;
+  let circuitOpenedAt = 0;
+
   // 解析要监听的 spaces
   let spaceIds = resolveSpaceIds(a2aConfig);
   if (spaceIds.length === 0) {
     spaceIds = await fetchAllSpaceIds(a2aConfig.apiUrl);
     if (spaceIds.length === 0) {
-      error("a2a-space: no spaces found");
+      error("atheism: no spaces found");
       return;
     }
-    log(`a2a-space: discovered ${spaceIds.length} spaces: ${spaceIds.join(", ")}`);
+    log(`atheism: discovered ${spaceIds.length} spaces: ${spaceIds.join(", ")}`);
   }
 
   const agentNames = agentProfiles.map(a => a.agentName || a.agentId).join(", ");
-  log(`a2a-space: starting monitor (spaces: [${spaceIds.join(", ")}], agents: [${agentNames}] (${agentProfiles.length}), interval: ${pollIntervalMs}ms, maxConcurrent: ${maxConcurrent})`);
+  log(`atheism: starting monitor (spaces: [${spaceIds.join(", ")}], agents: [${agentNames}] (${agentProfiles.length}), interval: ${pollIntervalMs}ms, maxConcurrent: ${maxConcurrent})`);
 
   // 每个 agent × space 独立的 lastTimestamp
   // key: `${agentId}:${spaceId}`
@@ -146,7 +156,7 @@ export async function monitorA2ASpace(opts: MonitorA2ASpaceOpts): Promise<void> 
   // key: sessionId → { pausedAt, pausedBy }
   const pausedSessions = loadPausedSessions();
   if (pausedSessions.size > 0) {
-    log(`a2a-space: [STARTUP] restored ${pausedSessions.size} paused session(s) from disk`);
+    log(`atheism: [STARTUP] restored ${pausedSessions.size} paused session(s) from disk`);
   }
 
   // 🆕 首轮 poll 标记：重启后第一次 poll 只处理 human 消息，跳过 completion signal
@@ -168,16 +178,16 @@ export async function monitorA2ASpace(opts: MonitorA2ASpaceOpts): Promise<void> 
   // 这是修复"重启后同一 session 出现两个 streaming"问题的关键步骤：
   // 1. 找到所有 streaming=true 的 placeholder → finalize 它们
   // 2. 将对应的 trigger message 标记为已处理 → 防止重复处理
-  log('a2a-space: [STARTUP] cleaning up zombie streaming messages...');
+  log('atheism: [STARTUP] cleaning up zombie streaming messages...');
   let totalCleaned = 0;
   // 收集被中断的 session（用于 auto-resume）
   // key: sessionId → { agentIds, hadContent, spaceConfig }
-  const interruptedSessions = new Map<string, { agentIds: string[]; hadContent: boolean; spaceConfig: A2ASpaceConfig }>();
+  const interruptedSessions = new Map<string, { agentIds: string[]; hadContent: boolean; spaceConfig: AtheismConfig }>();
   
   for (const agent of agentProfiles) {
     for (const sid of spaceIds) {
       try {
-        const spaceConfig = { ...a2aConfig, spaceId: sid } as A2ASpaceConfig;
+        const spaceConfig = { ...a2aConfig, spaceId: sid } as AtheismConfig;
         const cleaned = await cleanupZombieStreaming({ config: spaceConfig, agentId: agent.agentId });
         for (const { jobId, sessionId, hadContent } of cleaned) {
           if (jobId) {
@@ -194,20 +204,20 @@ export async function monitorA2ASpace(opts: MonitorA2ASpaceOpts): Promise<void> 
         }
         totalCleaned += cleaned.length;
       } catch (err) {
-        error(`a2a-space: [STARTUP] cleanup error for ${agent.agentId}@${sid}: ${err}`);
+        error(`atheism: [STARTUP] cleanup error for ${agent.agentId}@${sid}: ${err}`);
       }
     }
   }
   if (totalCleaned > 0) {
-    log(`a2a-space: [STARTUP] cleaned ${totalCleaned} zombie streaming messages`);
+    log(`atheism: [STARTUP] cleaned ${totalCleaned} zombie streaming messages`);
   } else {
-    log('a2a-space: [STARTUP] no zombie streaming messages found');
+    log('atheism: [STARTUP] no zombie streaming messages found');
   }
 
   // ═══ Startup step 1.5: Auto-resume — 向被中断的 session 注入恢复消息 ═══
   const autoResume = a2aConfig.autoResume !== false; // 默认开启
   if (autoResume && interruptedSessions.size > 0) {
-    log(`a2a-space: [RESUME] auto-resuming ${interruptedSessions.size} interrupted session(s)...`);
+    log(`atheism: [RESUME] auto-resuming ${interruptedSessions.size} interrupted session(s)...`);
     let resumeCount = 0;
     for (const [key, { agentIds, hadContent, spaceConfig }] of interruptedSessions) {
       const sessionId = key.split(':').slice(1).join(':'); // 去掉 spaceId 前缀
@@ -225,12 +235,12 @@ export async function monitorA2ASpace(opts: MonitorA2ASpaceOpts): Promise<void> 
           await new Promise(r => setTimeout(r, 500));
         }
       } catch (err) {
-        error(`a2a-space: [RESUME] failed for session ${sessionId}: ${err}`);
+        error(`atheism: [RESUME] failed for session ${sessionId}: ${err}`);
       }
     }
-    log(`a2a-space: [RESUME] posted ${resumeCount} resume message(s)`);
+    log(`atheism: [RESUME] posted ${resumeCount} resume message(s)`);
   } else if (!autoResume && interruptedSessions.size > 0) {
-    log(`a2a-space: [RESUME] auto-resume disabled, ${interruptedSessions.size} interrupted session(s) not resumed`);
+    log(`atheism: [RESUME] auto-resume disabled, ${interruptedSessions.size} interrupted session(s) not resumed`);
   }
 
   // ═══ Startup step 2: 标记所有近期已处理的 trigger message ═══
@@ -238,23 +248,23 @@ export async function monitorA2ASpace(opts: MonitorA2ASpaceOpts): Promise<void> 
   // processedMessages 是内存中的 Set，重启后清空。
   // 如果只标记 zombie 的 job_id，已完成的 response 对应的 trigger 会被重新处理，
   // 导致同一 session 出现两个 streaming 响应。
-  log('a2a-space: [STARTUP] marking recently-processed messages...');
+  log('atheism: [STARTUP] marking recently-processed messages...');
   let totalMarked = 0;
   for (const agent of agentProfiles) {
     for (const sid of spaceIds) {
       try {
-        const spaceConfig = { ...a2aConfig, spaceId: sid } as A2ASpaceConfig;
+        const spaceConfig = { ...a2aConfig, spaceId: sid } as AtheismConfig;
         const jobIds = await getRecentAgentJobIds({ config: spaceConfig, agentId: agent.agentId });
         for (const jobId of jobIds) {
           markMessageProcessed(agent.agentId, jobId);
         }
         totalMarked += jobIds.length;
       } catch (err) {
-        error(`a2a-space: [STARTUP] mark error for ${agent.agentId}@${sid}: ${err}`);
+        error(`atheism: [STARTUP] mark error for ${agent.agentId}@${sid}: ${err}`);
       }
     }
   }
-  log(`a2a-space: [STARTUP] marked ${totalMarked} recently-processed trigger messages`);
+  log(`atheism: [STARTUP] marked ${totalMarked} recently-processed trigger messages`);
 
   async function refreshMembership() {
     const now = Date.now();
@@ -270,7 +280,7 @@ export async function monitorA2ASpace(opts: MonitorA2ASpaceOpts): Promise<void> 
             for (const agent of agentProfiles) {
               lastTimestamps.set(`${agent.agentId}:${sid}`, Date.now() - 60 * 1000);
             }
-            log(`a2a-space: [discovery] new space detected: ${sid}`);
+            log(`atheism: [discovery] new space detected: ${sid}`);
           }
         }
       } catch {}
@@ -280,7 +290,8 @@ export async function monitorA2ASpace(opts: MonitorA2ASpaceOpts): Promise<void> 
     for (const sid of spaceIds) {
       try {
         const url = `${a2aConfig.apiUrl}/spaces/${sid}/members`;
-        if (!res.ok) { log(`a2a-space: [membership] ${sid} HTTP ${res.status}`); continue; }
+        const res = await fetch(url);
+        if (!res.ok) { log(`atheism: [membership] ${sid} HTTP ${res.status}`); continue; }
         const { members } = await res.json() as { members: Array<{ agent_id: string }> };
         const memberIds = new Set(members.map((m: { agent_id: string }) => m.agent_id));
         for (const agent of agentProfiles) {
@@ -293,7 +304,7 @@ export async function monitorA2ASpace(opts: MonitorA2ASpaceOpts): Promise<void> 
         }
         success = true;
       } catch (err) {
-        log(`a2a-space: [membership] failed to fetch ${sid}: ${err}`);
+        log(`atheism: [membership] failed to fetch ${sid}: ${err}`);
       }
     }
     // 只在至少成功一次时更新刷新时间，否则下次 poll 立即重试
@@ -301,17 +312,33 @@ export async function monitorA2ASpace(opts: MonitorA2ASpaceOpts): Promise<void> 
       lastMembershipRefresh = now;
       // 日志：输出缓存状态
       const summary = [...membershipCache.entries()].map(([aid, spaces]) => `${aid}:[${[...spaces].join(',')}]`).join(' ');
-      log(`a2a-space: [membership] refreshed: ${summary}`);
+      log(`atheism: [membership] refreshed: ${summary}`);
     }
   }
 
   return new Promise<void>((resolve) => {
     if (abortSignal) {
-      abortSignal.addEventListener("abort", () => { log("a2a-space: monitor aborted"); resolve(); });
+      abortSignal.addEventListener("abort", () => { log("atheism: monitor aborted"); resolve(); });
     }
 
     const poll = async () => {
       if (abortSignal?.aborted) { resolve(); return; }
+
+      // ═══ Circuit Breaker Check ═══
+      if (circuitOpen) {
+        const elapsed = Date.now() - circuitOpenedAt;
+        if (elapsed < CIRCUIT_BREAKER_RESET_MS) {
+          // 熔断中，跳过本轮
+          setTimeout(poll, CIRCUIT_BREAKER_RESET_MS - elapsed + 1000);
+          return;
+        }
+        // 探活：重置熔断，尝试一次
+        log("atheism: [circuit-breaker] attempting recovery probe...");
+        circuitOpen = false;
+      }
+
+      let pollHadSuccess = false;
+      let pollHadFailure = false;
 
       // 🆕 刷新 membership 缓存
       await refreshMembership();
@@ -328,19 +355,19 @@ export async function monitorA2ASpace(opts: MonitorA2ASpaceOpts): Promise<void> 
           const agentSpaces = membershipCache.get(agentId);
           if (agentSpaces && agentSpaces.size > 0 && !agentSpaces.has(spaceId)) continue;
           try {
-            const spaceConfig = { ...a2aConfig, spaceId } as A2ASpaceConfig;
+            const spaceConfig = { ...a2aConfig, spaceId } as AtheismConfig;
             const tsKey = `${agentId}:${spaceId}`;
             const since = lastTimestamps.get(tsKey) || Date.now();
 
             // 每个 Agent 独立 poll（server 为每个 agent_id 分别做心跳）
-            const { messages, next_since, online_agents, eval_locks, session_mutes } = await fetchA2AMessages({
+            const { messages, next_since, online_agents, eval_locks, session_mutes } = await fetchAtheismMessages({
               config: spaceConfig,
               since,
               agentProfile,
             });
 
             if (messages.length > 0) {
-              log(`a2a-space: [${agentId}@${spaceId}] received ${messages.length} message(s), online: [${online_agents.map(a => a.agent_id).join(', ')}]`);
+              log(`atheism: [${agentId}@${spaceId}] received ${messages.length} message(s), online: [${online_agents.map(a => a.agent_id).join(', ')}]`);
             }
 
             // 判断是否只有自己在线（排除同一 OpenClaw 实例的所有逻辑 Agent）
@@ -350,7 +377,7 @@ export async function monitorA2ASpace(opts: MonitorA2ASpaceOpts): Promise<void> 
             const amAlone = online_agents.length <= 1;
 
             // 按 session 分组（排除自己的消息）
-            const bySession = new Map<string, A2AMessage[]>();
+            const bySession = new Map<string, AtheismMessage[]>();
             const sessionsWithCompletions = new Set<string>();
             let hasUnprocessedMessages = false; // 🆕 追踪是否有消息因锁被拒未处理
             
@@ -406,7 +433,7 @@ export async function monitorA2ASpace(opts: MonitorA2ASpaceOpts): Promise<void> 
               // ─── @human 暂停检查（持久化） ───
               // 1. 人类发消息 → 解除该 session 的暂停
               if (hasHumanMsg && pausedSessions.has(sid)) {
-                log(`a2a-space: [${agentId}@${sid}] human message received, resuming paused session (was paused by ${pausedSessions.get(sid)!.pausedBy})`);
+                log(`atheism: [${agentId}@${sid}] human message received, resuming paused session (was paused by ${pausedSessions.get(sid)!.pausedBy})`);
                 pausedSessions.delete(sid);
                 savePausedSessions(pausedSessions);
               }
@@ -418,12 +445,12 @@ export async function monitorA2ASpace(opts: MonitorA2ASpaceOpts): Promise<void> 
                   if (/@human\b/i.test(t) && !pausedSessions.has(sid)) {
                     pausedSessions.set(sid, { pausedAt: Date.now(), pausedBy: m.from_agent || 'unknown' });
                     savePausedSessions(pausedSessions);
-                    log(`a2a-space: [${agentId}@${sid}] @human detected from ${m.from_agent}, pausing collaboration until human input`);
+                    log(`atheism: [${agentId}@${sid}] @human detected from ${m.from_agent}, pausing collaboration until human input`);
                     // 🆕 立即中止该 session 所有在途 Agent（发出 @human 的除外）
                     const allJobs = getAllActiveJobs();
                     for (const [, job] of allJobs) {
                       if (job.sessionId === sid && job.agentId !== m.from_agent) {
-                        log(`a2a-space: [${agentId}@${sid}] @human pause: aborting in-flight ${job.agentId}`);
+                        log(`atheism: [${agentId}@${sid}] @human pause: aborting in-flight ${job.agentId}`);
                         await abortActiveJob(sid, "@human 暂停协作，中止在途任务", job.agentId);
                       }
                     }
@@ -441,7 +468,7 @@ export async function monitorA2ASpace(opts: MonitorA2ASpaceOpts): Promise<void> 
               if (existingJob) {
                 // 🆕 @human 暂停：session 被暂停 + 没有新 human 消息 → 中止在途任务
                 if (pausedSessions.has(sid) && !hasHumanMsg) {
-                  log(`a2a-space: [${agentId}@${sid}] session paused by @human, aborting in-flight job ${existingJob.jobId}`);
+                  log(`atheism: [${agentId}@${sid}] session paused by @human, aborting in-flight job ${existingJob.jobId}`);
                   await abortActiveJob(sid, "@human 暂停协作，中止在途任务", agentId);
                   continue;
                 }
@@ -451,7 +478,7 @@ export async function monitorA2ASpace(opts: MonitorA2ASpaceOpts): Promise<void> 
                   if (newHumanMsg.message_id === existingJob.jobId) {
                     continue;
                   }
-                  log(`a2a-space: [INTERRUPT] ${agentId}@${sid}: NEW human message ${newHumanMsg.message_id}, aborting ${existingJob.jobId}`);
+                  log(`atheism: [INTERRUPT] ${agentId}@${sid}: NEW human message ${newHumanMsg.message_id}, aborting ${existingJob.jobId}`);
                   await abortActiveJob(sid, "新消息到达，中断当前任务", agentId);
                   await new Promise(r => setTimeout(r, 200));
                   // 🆕 @mention 优先级：新 human 消息 @了特定 Agent 且我不在其中 → 让步
@@ -462,7 +489,7 @@ export async function monitorA2ASpace(opts: MonitorA2ASpaceOpts): Promise<void> 
                       online_agents.some(a => a.agent_id === mid)
                     );
                     if (mentionedOnline) {
-                      log(`a2a-space: [${agentId}@${sid}] human msg @mentions [${interruptMentions.mentionedAgentIds.join(',')}], deferring`);
+                      log(`atheism: [${agentId}@${sid}] human msg @mentions [${interruptMentions.mentionedAgentIds.join(',')}], deferring`);
                       continue;
                     }
                   }
@@ -495,7 +522,7 @@ export async function monitorA2ASpace(opts: MonitorA2ASpaceOpts): Promise<void> 
                     online_agents.some(a => a.agent_id === mid)
                   );
                   if (mentionedOnline) {
-                    log(`a2a-space: [${agentId}@${sid}] deferring to @mentioned [${mentions.mentionedAgentIds.join(',')}]`);
+                    log(`atheism: [${agentId}@${sid}] deferring to @mentioned [${mentions.mentionedAgentIds.join(',')}]`);
                     continue;
                   }
                   // 被 @ 的 Agent 全部不在线 → 回退到正常流程
@@ -509,7 +536,7 @@ export async function monitorA2ASpace(opts: MonitorA2ASpaceOpts): Promise<void> 
                   const cooldownKey = `${agentId}:${sid}`;
                   const lastEval = lastCompletionEval.get(cooldownKey) || 0;
                   if (Date.now() - lastEval < COMPLETION_COOLDOWN_MS) {
-                    log(`a2a-space: [${agentId}@${sid}] completion signal skipped (cooldown, last eval ${Math.round((Date.now() - lastEval) / 1000)}s ago)`);
+                    log(`atheism: [${agentId}@${sid}] completion signal skipped (cooldown, last eval ${Math.round((Date.now() - lastEval) / 1000)}s ago)`);
                     // 仍然标记为已消费，防止反复触发
                     for (const m of sessionMsgs) {
                       const isCandidate = m.type === 'human_job_response' && 
@@ -527,7 +554,7 @@ export async function monitorA2ASpace(opts: MonitorA2ASpaceOpts): Promise<void> 
                   : latestMsg;
                 
                 if (isCompletionSignal) {
-                  log(`a2a-space: [${agentId}@${sid}] completion signal from ${latestMsg.from_agent}, triggering re-evaluation`);
+                  log(`atheism: [${agentId}@${sid}] completion signal from ${latestMsg.from_agent}, triggering re-evaluation`);
                 }
                 
                 // 🆕 Bug fix: humanAlreadyProcessed + no completion signal = nothing to do
@@ -556,7 +583,7 @@ export async function monitorA2ASpace(opts: MonitorA2ASpaceOpts): Promise<void> 
                     }
                   }
                   if (consumed > 1) {
-                    log(`a2a-space: [${agentId}@${sid}] consumed ${consumed} completion candidates (batch)`);
+                    log(`atheism: [${agentId}@${sid}] consumed ${consumed} completion candidates (batch)`);
                   }
                 }
                 
@@ -581,14 +608,38 @@ export async function monitorA2ASpace(opts: MonitorA2ASpaceOpts): Promise<void> 
             }
             // 🆕 标记首轮 poll 完成，后续 poll 允许 completion signal
             firstPollDone.add(tsKey);
+            pollHadSuccess = true;
           } catch (err) {
-            error(`a2a-space: [${agentId}@${spaceId}] poll error: ${err}`);
+            error(`atheism: [${agentId}@${spaceId}] poll error: ${err}`);
+            pollHadFailure = true;
           }
         }
       }
 
+      // ═══ Backoff & Circuit Breaker Logic ═══
+      if (pollHadFailure && !pollHadSuccess) {
+        // 全部失败（后端可能挂了）
+        consecutiveFailures++;
+        currentBackoffMs = Math.min(currentBackoffMs * 2, MAX_BACKOFF_MS);
+        
+        if (consecutiveFailures >= CIRCUIT_BREAKER_THRESHOLD) {
+          circuitOpen = true;
+          circuitOpenedAt = Date.now();
+          log(`atheism: [circuit-breaker] OPEN after ${consecutiveFailures} consecutive failures, will probe in ${CIRCUIT_BREAKER_RESET_MS/1000}s`);
+        } else {
+          log(`atheism: [backoff] poll failed (${consecutiveFailures}x), next attempt in ${currentBackoffMs}ms`);
+        }
+      } else if (pollHadSuccess) {
+        // 至少部分成功，重置退避
+        if (consecutiveFailures > 0) {
+          log(`atheism: [backoff] recovered after ${consecutiveFailures} failures`);
+        }
+        consecutiveFailures = 0;
+        currentBackoffMs = pollIntervalMs;
+      }
+
       if (!abortSignal?.aborted) {
-        setTimeout(poll, pollIntervalMs);
+        setTimeout(poll, currentBackoffMs);
       } else {
         resolve();
       }
@@ -604,9 +655,9 @@ export async function monitorA2ASpace(opts: MonitorA2ASpaceOpts): Promise<void> 
  */
 async function processSessionMessage(
   cfg: ClawdbotConfig,
-  spaceConfig: A2ASpaceConfig,
+  spaceConfig: AtheismConfig,
   sessionId: string,
-  message: A2AMessage,
+  message: AtheismMessage,
   onlineAgents: OnlineAgent[],
   evalLocks: EvalLock[],
   agentId: string,
@@ -617,9 +668,9 @@ async function processSessionMessage(
   const error = console.error;
 
   if (amAlone) {
-    log(`a2a-space: [${agentId}@${sessionId}] solo mode, processing directly`);
-    handleA2AMessage({ cfg, message, config: spaceConfig, onlineAgents, agentProfile })
-      .catch(err => error(`a2a-space: [BG] error: ${err}`));
+    log(`atheism: [${agentId}@${sessionId}] solo mode, processing directly`);
+    handleAtheismMessage({ cfg, message, config: spaceConfig, onlineAgents, agentProfile })
+      .catch(err => error(`atheism: [BG] error: ${err}`));
     return true;
   }
 
@@ -627,18 +678,18 @@ async function processSessionMessage(
   const sessionLock = evalLocks.find(l => l.session_id === sessionId);
   
   if (sessionLock && sessionLock.holder !== agentId) {
-    log(`a2a-space: [${agentId}@${sessionId}] eval lock held by ${sessionLock.holder}, skipping`);
+    log(`atheism: [${agentId}@${sessionId}] eval lock held by ${sessionLock.holder}, skipping`);
     return false;
   }
 
   const claim = await claimEvalLock({ config: spaceConfig, sessionId, agentId });
   
   if (!claim.granted) {
-    log(`a2a-space: [${agentId}@${sessionId}] eval lock denied (held by: ${claim.held_by}), will retry`);
+    log(`atheism: [${agentId}@${sessionId}] eval lock denied (held by: ${claim.held_by}), will retry`);
     return false;
   }
 
-  log(`a2a-space: [${agentId}@${sessionId}] eval lock acquired, processing`);
+  log(`atheism: [${agentId}@${sessionId}] eval lock acquired, processing`);
 
   // 🆕 锁续期定时器：每 30s 续一次，防止长任务（写代码等）超过 60s TTL 被回收
   const renewInterval = setInterval(async () => {
@@ -648,12 +699,12 @@ async function processSessionMessage(
   }, 30000);
 
   // fire-and-forget: 不阻塞 poll 循环，让其他 space/agent 继续工作
-  handleA2AMessage({ cfg, message, config: spaceConfig, onlineAgents, agentProfile })
-    .catch(err => error(`a2a-space: [${agentId}@${sessionId}] error during locked processing: ${err}`))
+  handleAtheismMessage({ cfg, message, config: spaceConfig, onlineAgents, agentProfile })
+    .catch(err => error(`atheism: [${agentId}@${sessionId}] error during locked processing: ${err}`))
     .finally(async () => {
       clearInterval(renewInterval);
       await releaseEvalLock({ config: spaceConfig, sessionId, agentId });
-      log(`a2a-space: [${agentId}@${sessionId}] eval lock released`);
+      log(`atheism: [${agentId}@${sessionId}] eval lock released`);
     });
   return true;
 }

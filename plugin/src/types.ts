@@ -6,7 +6,7 @@ export type AgentProfile = {
   description?: string;
 };
 
-export type A2ASpaceConfig = {
+export type AtheismConfig = {
   enabled?: boolean;
   apiUrl?: string;
   /** 支持 string（单个）或 string[]（多个）或 "*"（全部） */
@@ -31,7 +31,7 @@ export type A2ASpaceConfig = {
 };
 
 /** 解析配置为 AgentProfile 数组（向后兼容单 agent 配置） */
-export function resolveAgentProfiles(config: A2ASpaceConfig): AgentProfile[] {
+export function resolveAgentProfiles(config: AtheismConfig): AgentProfile[] {
   if (config.agents && config.agents.length > 0) {
     return config.agents;
   }
@@ -47,14 +47,14 @@ export function resolveAgentProfiles(config: A2ASpaceConfig): AgentProfile[] {
   return [];
 }
 
-export type A2ASpaceAccount = {
+export type AtheismAccount = {
   accountId: string;
   enabled: boolean;
   configured: boolean;
-  config: A2ASpaceConfig;
+  config: AtheismConfig;
 };
 
-export type A2ASession = {
+export type AtheismSession = {
   session_id: string;
   space_id: string;
   title: string;
@@ -65,7 +65,7 @@ export type A2ASession = {
   last_activity?: string;
 };
 
-export type A2AMessage = {
+export type AtheismMessage = {
   message_id: string;
   session_id: string;
   space_id: string;
@@ -83,7 +83,7 @@ export type A2AMessage = {
   updated_at?: string;
 };
 
-export type A2AMessageContext = {
+export type AtheismMessageContext = {
   jobId: string;
   sessionId: string;
   responseId: string;
@@ -96,7 +96,7 @@ export type ActiveJob = {
   sessionId: string;
   spaceId: string;
   responseId: string;
-  config: A2ASpaceConfig;
+  config: AtheismConfig;
   /** 该任务属于哪个逻辑 Agent */
   agentId: string;
   abortController: AbortController;
@@ -128,7 +128,7 @@ export type SessionSummary = {
 };
 
 export type PollResponse = {
-  messages: A2AMessage[];
+  messages: AtheismMessage[];
   next_since: number;
   online_agents: OnlineAgent[];
   eval_locks: EvalLock[];

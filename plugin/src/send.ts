@@ -1,7 +1,7 @@
-import type { A2ASpaceConfig, A2ASession, PollResponse, AgentProfile } from "./types.js";
+import type { AtheismConfig, AtheismSession, PollResponse, AgentProfile } from "./types.js";
 
-export async function fetchA2AMessages(params: {
-  config: A2ASpaceConfig;
+export async function fetchAtheismMessages(params: {
+  config: AtheismConfig;
   since: number;
   sessionId?: string;
   /** 当前轮询的 Agent 身份（多 Agent 模式下每个 Agent 独立 poll） */
@@ -29,7 +29,7 @@ export async function fetchA2AMessages(params: {
   const res = await fetch(url);
 
   if (!res.ok) {
-    throw new Error(`A2A Space API error: ${res.status} ${res.statusText}`);
+    throw new Error(`Atheism API error: ${res.status} ${res.statusText}`);
   }
 
   const data = await res.json();
@@ -42,10 +42,10 @@ export async function fetchA2AMessages(params: {
   };
 }
 
-export async function fetchA2ASessions(params: {
-  config: A2ASpaceConfig;
+export async function fetchAtheismSessions(params: {
+  config: AtheismConfig;
   status?: string;
-}): Promise<{ sessions: A2ASession[] }> {
+}): Promise<{ sessions: AtheismSession[] }> {
   const { config, status } = params;
   const { apiUrl, spaceId } = config;
 
@@ -57,17 +57,17 @@ export async function fetchA2ASessions(params: {
   const res = await fetch(url);
 
   if (!res.ok) {
-    throw new Error(`A2A Space API error: ${res.status} ${res.statusText}`);
+    throw new Error(`Atheism API error: ${res.status} ${res.statusText}`);
   }
 
   return res.json();
 }
 
-export async function createA2ASession(params: {
-  config: A2ASpaceConfig;
+export async function createAtheismSession(params: {
+  config: AtheismConfig;
   title?: string;
   createdBy?: string;
-}): Promise<A2ASession> {
+}): Promise<AtheismSession> {
   const { config, title, createdBy } = params;
   const { apiUrl, spaceId } = config;
 
@@ -84,14 +84,14 @@ export async function createA2ASession(params: {
   });
 
   if (!res.ok) {
-    throw new Error(`A2A Space API error: ${res.status} ${res.statusText}`);
+    throw new Error(`Atheism API error: ${res.status} ${res.statusText}`);
   }
 
   return res.json();
 }
 
 export async function createA2AResponse(params: {
-  config: A2ASpaceConfig;
+  config: AtheismConfig;
   jobId: string;
   sessionId: string;
   initialResult: string;
@@ -121,15 +121,15 @@ export async function createA2AResponse(params: {
   });
 
   if (!res.ok) {
-    throw new Error(`A2A Space API error: ${res.status} ${res.statusText}`);
+    throw new Error(`Atheism API error: ${res.status} ${res.statusText}`);
   }
 
   const { message_id } = await res.json();
   return message_id;
 }
 
-export async function updateA2AMessage(params: {
-  config: A2ASpaceConfig;
+export async function updateAtheismMessage(params: {
+  config: AtheismConfig;
   messageId: string;
   result: string;
   streaming: boolean;
@@ -149,16 +149,16 @@ export async function updateA2AMessage(params: {
   });
 
   if (!res.ok) {
-    throw new Error(`A2A Space API error: ${res.status} ${res.statusText}`);
+    throw new Error(`Atheism API error: ${res.status} ${res.statusText}`);
   }
 }
 
 /** 获取 session 的完整消息历史 */
 export async function fetchSessionMessages(params: {
-  config: A2ASpaceConfig;
+  config: AtheismConfig;
   sessionId: string;
   limit?: number;
-}): Promise<A2AMessage[]> {
+}): Promise<AtheismMessage[]> {
   const { config, sessionId, limit = 30 } = params;
   const { apiUrl, spaceId } = config;
 
@@ -166,7 +166,7 @@ export async function fetchSessionMessages(params: {
   const res = await fetch(url);
 
   if (!res.ok) {
-    throw new Error(`A2A Space API error: ${res.status} ${res.statusText}`);
+    throw new Error(`Atheism API error: ${res.status} ${res.statusText}`);
   }
 
   const { messages } = await res.json();
@@ -174,8 +174,8 @@ export async function fetchSessionMessages(params: {
 }
 
 /** 删除一条消息（用于撤回 NO_REPLY 的占位消息） */
-export async function deleteA2AMessage(params: {
-  config: A2ASpaceConfig;
+export async function deleteAtheismMessage(params: {
+  config: AtheismConfig;
   messageId: string;
 }): Promise<void> {
   const { config, messageId } = params;
@@ -188,13 +188,13 @@ export async function deleteA2AMessage(params: {
 
   // 404 = already deleted, that's fine
   if (!res.ok && res.status !== 404) {
-    throw new Error(`A2A Space API error: ${res.status} ${res.statusText}`);
+    throw new Error(`Atheism API error: ${res.status} ${res.statusText}`);
   }
 }
 
 /** 获取 space 的自定义规则 */
 export async function fetchCustomRules(params: {
-  config: A2ASpaceConfig;
+  config: AtheismConfig;
 }): Promise<string> {
   const { config } = params;
   const { apiUrl, spaceId } = config;
@@ -212,7 +212,7 @@ export async function fetchCustomRules(params: {
 
 /** 尝试获取 session 评估锁 */
 export async function claimEvalLock(params: {
-  config: A2ASpaceConfig;
+  config: AtheismConfig;
   sessionId: string;
   /** 用哪个 Agent 身份 claim（多 Agent 模式） */
   agentId?: string;
@@ -243,7 +243,7 @@ export async function claimEvalLock(params: {
 
 /** 释放 session 评估锁 */
 export async function releaseEvalLock(params: {
-  config: A2ASpaceConfig;
+  config: AtheismConfig;
   sessionId: string;
   /** 用哪个 Agent 身份 release（多 Agent 模式） */
   agentId?: string;
@@ -268,7 +268,7 @@ export async function releaseEvalLock(params: {
 
 /** 获取 session summary */
 export async function fetchSessionSummary(params: {
-  config: A2ASpaceConfig;
+  config: AtheismConfig;
   sessionId: string;
 }): Promise<{ summary_text: string; last_message_id: string | null; message_count: number } | null> {
   const { config, sessionId } = params;
@@ -285,7 +285,7 @@ export async function fetchSessionSummary(params: {
 
 /** 更新 session summary */
 export async function updateSessionSummary(params: {
-  config: A2ASpaceConfig;
+  config: AtheismConfig;
   sessionId: string;
   summaryText: string;
   lastMessageId?: string;
@@ -318,7 +318,7 @@ const directoryCache = new Map<string, { content: string; ts: number }>();
 const DIRECTORY_CACHE_TTL = 60_000;
 
 export async function fetchSkillDirectory(params: {
-  config: A2ASpaceConfig;
+  config: AtheismConfig;
 }): Promise<string | null> {
   const { config } = params;
   const { apiUrl, spaceId } = config;
@@ -343,7 +343,7 @@ export async function fetchSkillDirectory(params: {
 
 /** Fetch rendered collaboration ledger for a session */
 export async function fetchLedgerRendered(params: {
-  config: A2ASpaceConfig;
+  config: AtheismConfig;
   sessionId: string;
 }): Promise<string | null> {
   const { config, sessionId } = params;
@@ -363,7 +363,7 @@ export async function fetchLedgerRendered(params: {
  * 替代之前的 "创建 placeholder → 更新为 [NO_REPLY]" 模式，消除可见噪声。
  */
 export async function notifyNoReply(params: {
-  config: A2ASpaceConfig;
+  config: AtheismConfig;
   sessionId: string;
   agentId: string;
 }): Promise<{ quiesced: boolean }> {
@@ -390,7 +390,7 @@ export async function notifyNoReply(params: {
  * 将它们 finalize（streaming=false），返回被清理的 job_id 列表。
  */
 export async function cleanupZombieStreaming(params: {
-  config: A2ASpaceConfig;
+  config: AtheismConfig;
   agentId: string;
   windowMs?: number;
 }): Promise<{ messageId: string; jobId: string; sessionId: string; hadContent: boolean }[]> {
@@ -419,7 +419,7 @@ export async function cleanupZombieStreaming(params: {
           ? "⚡ 服务重启，任务已中断"
           : `${existingResult}\n\n---\n⚡ 服务重启，响应被截断`;
 
-        await updateA2AMessage({
+        await updateAtheismMessage({
           config,
           messageId: zombie.message_id,
           result: newResult,
@@ -433,15 +433,15 @@ export async function cleanupZombieStreaming(params: {
           hadContent: !isPlaceholder,
         });
 
-        console.log(`a2a-space: [CLEANUP] finalized zombie ${zombie.message_id} (job: ${zombie.content?.job_id}, session: ${zombie.session_id}) from ${agentId}`);
+        console.log(`atheism: [CLEANUP] finalized zombie ${zombie.message_id} (job: ${zombie.content?.job_id}, session: ${zombie.session_id}) from ${agentId}`);
       } catch (err) {
-        console.error(`a2a-space: [CLEANUP] failed to finalize ${zombie.message_id}: ${err}`);
+        console.error(`atheism: [CLEANUP] failed to finalize ${zombie.message_id}: ${err}`);
       }
     }
 
     return cleaned;
   } catch (err) {
-    console.error(`a2a-space: [CLEANUP] error querying zombies for ${agentId}@${spaceId}: ${err}`);
+    console.error(`atheism: [CLEANUP] error querying zombies for ${agentId}@${spaceId}: ${err}`);
     return [];
   }
 }
@@ -451,7 +451,7 @@ export async function cleanupZombieStreaming(params: {
  * 让 poll 循环自动将其作为新任务触发 agent 继续工作。
  */
 export async function postResumeMessage(params: {
-  config: A2ASpaceConfig;
+  config: AtheismConfig;
   sessionId: string;
   interruptedAgentId: string;
   hadContent: boolean;
@@ -481,15 +481,15 @@ export async function postResumeMessage(params: {
     });
 
     if (!res.ok) {
-      console.error(`a2a-space: [RESUME] failed to post resume message to ${sessionId}: ${res.status}`);
+      console.error(`atheism: [RESUME] failed to post resume message to ${sessionId}: ${res.status}`);
       return null;
     }
 
     const { message_id } = await res.json();
-    console.log(`a2a-space: [RESUME] posted resume message ${message_id} to session ${sessionId}`);
+    console.log(`atheism: [RESUME] posted resume message ${message_id} to session ${sessionId}`);
     return message_id;
   } catch (err) {
-    console.error(`a2a-space: [RESUME] error posting resume to ${sessionId}: ${err}`);
+    console.error(`atheism: [RESUME] error posting resume to ${sessionId}: ${err}`);
     return null;
   }
 }
@@ -499,7 +499,7 @@ export async function postResumeMessage(params: {
  * 用于重启时将已处理的 trigger message 标记为 processed，防止重复处理。
  */
 export async function getRecentAgentJobIds(params: {
-  config: A2ASpaceConfig;
+  config: AtheismConfig;
   agentId: string;
   windowMs?: number;
 }): Promise<string[]> {

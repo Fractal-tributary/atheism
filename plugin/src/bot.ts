@@ -1,6 +1,6 @@
 import type { ClawdbotConfig } from "openclaw/plugin-sdk";
-import type { A2AMessage, A2ASpaceConfig, ActiveJob, OnlineAgent, AgentProfile, SessionSummary } from "./types.js";
-import { createA2AResponse, fetchSessionMessages, updateA2AMessage, deleteA2AMessage, fetchCustomRules, fetchSessionSummary, updateSessionSummary, fetchSkillDirectory, notifyNoReply, fetchLedgerRendered } from "./send.js";
+import type { AtheismMessage, AtheismConfig, ActiveJob, OnlineAgent, AgentProfile, SessionSummary } from "./types.js";
+import { createA2AResponse, fetchSessionMessages, updateAtheismMessage, deleteAtheismMessage, fetchCustomRules, fetchSessionSummary, updateSessionSummary, fetchSkillDirectory, notifyNoReply, fetchLedgerRendered } from "./send.js";
 import { getA2ARuntime } from "./runtime.js";
 import { createA2AReplyDispatcher } from "./reply-dispatcher.js";
 
@@ -43,8 +43,8 @@ export function markMessageProcessed(agentId: string, messageId: string): void {
 const activeJobs = new Map<string, ActiveJob>();
 const pendingQueue: Array<{
   cfg: ClawdbotConfig;
-  message: A2AMessage;
-  config: A2ASpaceConfig;
+  message: AtheismMessage;
+  config: AtheismConfig;
   onlineAgents: OnlineAgent[];
   agentProfile: AgentProfile;
 }> = [];
@@ -111,7 +111,7 @@ export async function abortActiveJob(sessionId: string, reason: string, agentId?
   if (!job) return;
   const log = console.log;
   
-  log(`a2a-space: [ABORT] ${job.agentId}@${sessionId}, job ${job.jobId}: ${reason}`);
+  log(`atheism: [ABORT] ${job.agentId}@${sessionId}, job ${job.jobId}: ${reason}`);
   job.abortController.abort();
   
   // Only update the message if a response was actually created (non-deferred or deferred that got created)
@@ -122,10 +122,10 @@ export async function abortActiveJob(sessionId: string, reason: string, agentId?
       // 对于 @human 暂停等有语义的中断，仍然保留标记
       const isNewMsgInterrupt = reason.includes('新消息到达') || reason.includes('中断当前');
       if (isNewMsgInterrupt) {
-        await deleteA2AMessage({ config: job.config, messageId: job.responseId });
-        log(`a2a-space: [ABORT] deleted placeholder message ${job.responseId}`);
+        await deleteAtheismMessage({ config: job.config, messageId: job.responseId });
+        log(`atheism: [ABORT] deleted placeholder message ${job.responseId}`);
       } else {
-        await updateA2AMessage({
+        await updateAtheismMessage({
           config: job.config,
           messageId: job.responseId,
           result: `⚡ ${reason}`,
@@ -133,7 +133,7 @@ export async function abortActiveJob(sessionId: string, reason: string, agentId?
         });
       }
     } catch (err) {
-      log(`a2a-space: [ABORT] failed to update/delete message: ${err}`);
+      log(`atheism: [ABORT] failed to update/delete message: ${err}`);
     }
   }
   
@@ -160,8 +160,8 @@ function drainQueue() {
     const aId = next.agentProfile.agentId;
     if (activeJobs.has(jobKey(aId, sid))) { remaining.push(next); continue; }
     if (spaceActiveCount(spc) >= maxConcurrent) { remaining.push(next); continue; }
-    log(`a2a-space: [DEQUEUE] ${aId}@${sid} (space ${spc}: ${spaceActiveCount(spc) + 1}/${maxConcurrent})`);
-    handleA2AMessage(next).catch(err => console.error(`a2a-space: [BG] error: ${err}`));
+    log(`atheism: [DEQUEUE] ${aId}@${sid} (space ${spc}: ${spaceActiveCount(spc) + 1}/${maxConcurrent})`);
+    handleAtheismMessage(next).catch(err => console.error(`atheism: [BG] error: ${err}`));
   }
   pendingQueue.push(...remaining);
 }
@@ -178,7 +178,7 @@ function buildCollaborationProtocol(selfAgentId: string, onlineAgents: OnlineAge
   const isAlone = onlineAgents.length <= 1;
 
   if (isAlone) {
-    return `You are the only agent in this A2A Space collaboration session.
+    return `You are the only agent in this Atheism collaboration session.
 Handle all tasks directly. If the human message needs a response, respond helpfully.
 If a previous agent message already fully addressed the topic and there's nothing to add, reply with exactly NO_REPLY.`;
   }
@@ -507,11 +507,11 @@ curl -s -X POST "${apiBaseUrl || 'http://localhost:3000/api'}/artifacts" \\
 - 如果内容复杂，先用 exec 把 HTML 写到临时文件，再 curl 上传`;
 }
 
-async function buildGroupSystemPrompt(config: A2ASpaceConfig, agentId: string, onlineAgents: OnlineAgent[], actualSpaceId?: string, sessionId?: string): Promise<string> {
+async function buildGroupSystemPrompt(config: AtheismConfig, agentId: string, onlineAgents: OnlineAgent[], actualSpaceId?: string, sessionId?: string): Promise<string> {
   const apiBase = config.apiUrl || 'http://localhost:3000/api';
   // 使用消息实际所在的 space_id，而非 config 中的 spaceId（可能是 "*"）
   const spaceId = actualSpaceId || (typeof config.spaceId === 'string' && config.spaceId !== '*' ? config.spaceId : 'default');
-  const spaceConfig = { ...config, spaceId } as A2ASpaceConfig;
+  const spaceConfig = { ...config, spaceId } as AtheismConfig;
   const protocol = buildCollaborationProtocol(agentId, onlineAgents, `${apiBase}/spaces/${spaceId}`, sessionId);
   
   let customRules = "";
@@ -539,7 +539,7 @@ async function buildGroupSystemPrompt(config: A2ASpaceConfig, agentId: string, o
 }
 
 /** 将会话历史转为 InboundHistory 结构 */
-function buildInboundHistory(messages: A2AMessage[], selfAgentId: string): Array<{ sender: string; body: string; timestamp?: number }> {
+function buildInboundHistory(messages: AtheismMessage[], selfAgentId: string): Array<{ sender: string; body: string; timestamp?: number }> {
   if (!messages || messages.length === 0) return [];
   
   return messages.map(msg => {
@@ -571,10 +571,10 @@ function buildInboundHistory(messages: A2AMessage[], selfAgentId: string): Array
   }).filter(h => h.body.length > 0);
 }
 
-export async function handleA2AMessage(params: {
+export async function handleAtheismMessage(params: {
   cfg: ClawdbotConfig;
-  message: A2AMessage;
-  config: A2ASpaceConfig;
+  message: AtheismMessage;
+  config: AtheismConfig;
   onlineAgents?: OnlineAgent[];
   /** 当前处理这条消息的逻辑 Agent 身份 */
   agentProfile: AgentProfile;
@@ -600,14 +600,14 @@ export async function handleA2AMessage(params: {
   // 检查该 agent 在该 session 是否已有活跃任务
   const jk = jobKey(agentId, sessionId);
   if (activeJobs.has(jk)) {
-    log(`a2a-space: ${agentId}@${sessionId} busy, skipping ${msgId}`);
+    log(`atheism: ${agentId}@${sessionId} busy, skipping ${msgId}`);
     return;
   }
   
   // 检查该 space 的并发上限（per-space 独立）
   const spaceCount = spaceActiveCount(spaceId);
   if (spaceCount >= maxConcurrent) {
-    log(`a2a-space: [QUEUE] space ${spaceId} concurrent limit (${spaceCount}/${maxConcurrent}), queuing ${agentId}@${sessionId}:${msgId}`);
+    log(`atheism: [QUEUE] space ${spaceId} concurrent limit (${spaceCount}/${maxConcurrent}), queuing ${agentId}@${sessionId}:${msgId}`);
     pendingQueue.push(params);
     processedMessages.add(dedupKey);
     return;
@@ -615,7 +615,7 @@ export async function handleA2AMessage(params: {
 
   const msgText = message.content.job || message.content.message || message.content.result || "";
   if (!msgText) {
-    log(`a2a-space: no text in message ${msgId}`);
+    log(`atheism: no text in message ${msgId}`);
     return;
   }
 
@@ -625,14 +625,14 @@ export async function handleA2AMessage(params: {
   let markDispatchAborted: (() => void) | undefined; // 🆕 声明在 try 外部，供 catch 使用
 
   try {
-    log(`a2a-space: [${agentId}@${sessionId}] processing ${msgId} (space: ${spaceId}, from: ${message.from_agent}, agents: ${onlineAgents.length}, space-concurrent: ${spaceActiveCount(spaceId) + 1}/${maxConcurrent}, global: ${activeJobs.size + 1}): "${msgText.substring(0, 60)}"`);
+    log(`atheism: [${agentId}@${sessionId}] processing ${msgId} (space: ${spaceId}, from: ${message.from_agent}, agents: ${onlineAgents.length}, space-concurrent: ${spaceActiveCount(spaceId) + 1}/${maxConcurrent}, global: ${activeJobs.size + 1}): "${msgText.substring(0, 60)}"`);
 
     // 获取完整会话历史
-    let fullHistory: A2AMessage[] = [];
+    let fullHistory: AtheismMessage[] = [];
     try {
       fullHistory = await fetchSessionMessages({ config, sessionId, limit: 30 });
     } catch (err) {
-      log(`a2a-space: [${sessionId}] failed to fetch history: ${err}`);
+      log(`atheism: [${sessionId}] failed to fetch history: ${err}`);
     }
     
     // 🆕 获取 session summary
@@ -679,24 +679,24 @@ export async function handleA2AMessage(params: {
 
     // 注册活跃任务（responseId 可能为空，deferred mode 时会在 createResponse 回调中更新）
     activeJobs.set(jk, { jobId: msgId, sessionId, spaceId, responseId, config, agentId, abortController });
-    log(`a2a-space: [${agentId}@${sessionId}] active jobs: space ${spaceId}=${spaceActiveCount(spaceId)}/${maxConcurrent}, global=${activeJobs.size}`);
+    log(`atheism: [${agentId}@${sessionId}] active jobs: space ${spaceId}=${spaceActiveCount(spaceId)}/${maxConcurrent}, global=${activeJobs.size}`);
 
     // 🆕 两步路由:
     // Step 1: 用 agentId 做 peer.id 精确匹配 binding → 拿到正确的 agentId（a2a-coder / a2a-researcher）
     // Step 2: 手动构建 sessionKey 包含 space+session 信息 → 不同 session 不会共享上下文
     const route = core.channel.routing.resolveAgentRoute({
-      cfg, channel: "a2aspace", accountId: "default", peer: { kind: "direct", id: agentId },
+      cfg, channel: "atheism", accountId: "default", peer: { kind: "direct", id: agentId },
     });
     
     // 覆盖 sessionKey: 使用 ephemeral session（每条消息独立），避免 OpenClaw session transcript
     // 与 InboundHistory 双重叠加导致旧回复出现两次（P0 复读 bug 修复）
     // InboundHistory 是唯一的上下文来源，OpenClaw 不再累积自己的 session 历史
-    const isolatedSessionKey = `agent:${route.agentId}:a2aspace:direct:${agentId}:${spaceId}:${sessionId}:${msgId}`;
+    const isolatedSessionKey = `agent:${route.agentId}:atheism:direct:${agentId}:${spaceId}:${sessionId}:${msgId}`;
     const sessionKey = isolatedSessionKey;
 
     const senderName = isHuman ? "human" : (message.from_name || message.from_agent);
     const body = core.channel.reply.formatAgentEnvelope({
-      channel: "A2A Space", from: senderName, timestamp: new Date(), body: msgText,
+      channel: "Atheism", from: senderName, timestamp: new Date(), body: msgText,
     });
 
     // 协作协议使用当前 agentId
@@ -709,22 +709,22 @@ export async function handleA2AMessage(params: {
       CommandBody: msgText,
       InboundHistory: inboundHistory,
       GroupSystemPrompt: groupSystemPrompt,
-      GroupSubject: `A2A Space Session`,
-      From: `a2aspace:${message.from_agent}`,
-      To: `a2aspace:${agentId}`,
+      GroupSubject: `Atheism Session`,
+      From: `atheism:${message.from_agent}`,
+      To: `atheism:${agentId}`,
       SessionKey: sessionKey,
       AccountId: route.accountId,
       ChatType: "group",
       SenderName: senderName,
       SenderId: message.from_agent,
-      Provider: "a2aspace",
-      Surface: "a2aspace",
+      Provider: "atheism",
+      Surface: "atheism",
       MessageSid: `${agentId}:${msgId}`,
       Timestamp: Date.now(),
       WasMentioned: isHuman || isCompletionTrigger || isAgentMentioned(msgText, agentId, agentProfile.agentName),
       CommandAuthorized: isHuman || isCompletionTrigger,
-      OriginatingChannel: "a2aspace",
-      OriginatingTo: `a2aspace:${agentId}`,
+      OriginatingChannel: "atheism",
+      OriginatingTo: `atheism:${agentId}`,
     });
 
     // 🆕 Deferred creation callback: 当 Agent 有实质输出时，才创建 response 消息
@@ -745,17 +745,17 @@ export async function handleA2AMessage(params: {
       cfg, agentId: route.agentId, responseId, config,
       createResponse: createResponseCallback,
       onComplete: () => {
-        log(`a2a-space: [${agentId}@${sessionId}] COMPLETE job ${msgId}`);
+        log(`atheism: [${agentId}@${sessionId}] COMPLETE job ${msgId}`);
         clearActiveJob(sessionId, agentId);
       },
       onSilent: async () => {
-        log(`a2a-space: [${agentId}@${sessionId}] SILENT for ${msgId}`);
+        log(`atheism: [${agentId}@${sessionId}] SILENT for ${msgId}`);
         // 🆕 通知 server 用于 quiesce 追踪（不创建消息）
         try { await notifyNoReply({ config, sessionId, agentId }); } catch {}
         // 如果有创建过 placeholder（非 deferred 或 deferred 后创建了），删除它
         const effectiveId = getResponseId();
         if (effectiveId) {
-          try { await deleteA2AMessage({ config, messageId: effectiveId }); } catch {}
+          try { await deleteAtheismMessage({ config, messageId: effectiveId }); } catch {}
         }
         clearActiveJob(sessionId, agentId);
       },
@@ -771,7 +771,7 @@ export async function handleA2AMessage(params: {
     // 如果 job 已被中断，通知 dispatcher 不要 deliver，避免覆盖 abortActiveJob 的 ⚡ 标记
     if (abortController.signal.aborted) {
       markDispatchAborted?.();
-      log(`a2a-space: [${agentId}@${sessionId}] job was aborted, dispatcher notified`);
+      log(`atheism: [${agentId}@${sessionId}] job was aborted, dispatcher notified`);
       return;
     }
 
@@ -780,11 +780,11 @@ export async function handleA2AMessage(params: {
     if (!result?.queuedFinal && result?.counts?.final === 0) {
       if (!isCompleted() && !isSilent()) {
         // 没有产出任何消息 → 通知 quiesce 并清理 placeholder
-        log(`a2a-space: [${agentId}@${sessionId}] no output for ${msgId}, notifying NO_REPLY`);
+        log(`atheism: [${agentId}@${sessionId}] no output for ${msgId}, notifying NO_REPLY`);
         try { await notifyNoReply({ config, sessionId, agentId }); } catch {}
         const effectiveId = getResponseId();
         if (effectiveId) {
-          try { await deleteA2AMessage({ config, messageId: effectiveId }); } catch {}
+          try { await deleteAtheismMessage({ config, messageId: effectiveId }); } catch {}
         }
       }
       clearActiveJob(sessionId, agentId);
@@ -798,14 +798,14 @@ export async function handleA2AMessage(params: {
   } catch (err: any) {
     if (err?.name === "AbortError" || abortController.signal.aborted) {
       markDispatchAborted?.();  // 🆕 确保 abort 路径也通知 dispatcher
-      log(`a2a-space: [${agentId}@${sessionId}] interrupted`);
+      log(`atheism: [${agentId}@${sessionId}] interrupted`);
     } else {
-      error(`a2a-space: [${agentId}@${sessionId}] error: ${err}`);
+      error(`atheism: [${agentId}@${sessionId}] error: ${err}`);
       // 🆕 清理 zombie placeholder — 检查 activeJob 中可能被 deferred 更新的 responseId
       const effectiveResponseId = activeJobs.get(jk)?.responseId || responseId;
       if (effectiveResponseId) {
         try {
-          await updateA2AMessage({ config, messageId: effectiveResponseId, result: `❌ 处理出错: ${String(err).substring(0, 200)}`, streaming: false });
+          await updateAtheismMessage({ config, messageId: effectiveResponseId, result: `❌ 处理出错: ${String(err).substring(0, 200)}`, streaming: false });
         } catch {}
       }
       clearActiveJob(sessionId, agentId);
@@ -818,10 +818,10 @@ const SUMMARY_THRESHOLD = 5; // 每 5 条新消息触发一次总结（人类消
 const summaryInProgress = new Set<string>(); // 防止同一 session 并发生成
 
 async function triggerSummaryIfNeeded(params: {
-  config: A2ASpaceConfig;
+  config: AtheismConfig;
   sessionId: string;
   agentId: string;
-  fullHistory: A2AMessage[];
+  fullHistory: AtheismMessage[];
   sessionSummary: { summary_text: string; last_message_id: string | null; message_count: number } | null;
   isHuman: boolean;
 }) {
@@ -855,7 +855,7 @@ async function triggerSummaryIfNeeded(params: {
   
   summaryInProgress.add(sessionId);
   try {
-    log(`a2a-space: [${agentId}@${sessionId}] triggering summary generation (${newMessageCount} new messages)`);
+    log(`atheism: [${agentId}@${sessionId}] triggering summary generation (${newMessageCount} new messages)`);
     
     // 构建要总结的内容
     const previousSummary = sessionSummary?.summary_text || '';
@@ -897,10 +897,10 @@ async function triggerSummaryIfNeeded(params: {
         agentId,
         title: sessionTitle,
       });
-      log(`a2a-space: [${agentId}@${sessionId}] summary updated (${cleanSummary.length} chars)${sessionTitle ? ` title: "${sessionTitle}"` : ''}`);
+      log(`atheism: [${agentId}@${sessionId}] summary updated (${cleanSummary.length} chars)${sessionTitle ? ` title: "${sessionTitle}"` : ''}`);
     }
   } catch (err) {
-    console.error(`a2a-space: [${agentId}@${sessionId}] summary generation failed: ${err}`);
+    console.error(`atheism: [${agentId}@${sessionId}] summary generation failed: ${err}`);
   } finally {
     summaryInProgress.delete(sessionId);
   }

@@ -1106,7 +1106,7 @@ const API_URL = window.location.origin + '/api';
       const apiUrl = serverUrl + '/api';
       const skillUrl = serverUrl + '/api/skill';
       
-      const text = `请帮我接入 A2A Space 协作网络。
+      const text = `请帮我接入 Atheism 协作网络。
 
 连接信息：
 - Server: ${serverUrl}
@@ -1123,7 +1123,7 @@ const API_URL = window.location.origin + '/api';
 2. 安装 Plugin：
    curl -sL ${apiUrl}/plugin/install-script | bash
 
-3. 在 ~/.openclaw/openclaw.json 中配置 a2aspace channel，spaceId 填 "${currentSpace}"。
+3. 在 ~/.openclaw/openclaw.json 中配置 atheism channel，spaceId 填 "${currentSpace}"。
    具体配置格式参考接入文档。
 
 4. 配置完成后重启：openclaw gateway restart
@@ -1563,7 +1563,7 @@ const API_URL = window.location.origin + '/api';
 
     // ==================== System Prompt ====================
 
-    const BUILTIN_RULES = `You are participating in an A2A Space multi-agent collaboration session.
+    const BUILTIN_RULES = `You are participating in an Atheism multi-agent collaboration session.
 
 ## Collaboration Rules
 - You can see ALL messages in this session: from humans AND from other AI agents.

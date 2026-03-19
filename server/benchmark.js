@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * A2A Space Performance Benchmark
+ * Atheism Performance Benchmark
  * 
  * 模拟 plugin 侧的 poll 循环，测量关键 API 的响应时间。
  * 部署前跑一次做回归检查，确认性能没有退化。
@@ -97,7 +97,7 @@ function stats(values) {
 // ── 主测试 ────────────────────────────────────────────────────
 async function main() {
   console.log('╔══════════════════════════════════════════════════╗');
-  console.log('║     A2A Space Performance Benchmark             ║');
+  console.log('║     Atheism Performance Benchmark             ║');
   console.log('╚══════════════════════════════════════════════════╝');
   console.log(`Server:  ${SERVER}`);
   console.log(`Rounds:  ${ROUNDS}`);

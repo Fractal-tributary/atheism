@@ -8,7 +8,7 @@ export function setA2ARuntime(r: PluginRuntime) {
 
 export function getA2ARuntime(): PluginRuntime {
   if (!runtime) {
-    throw new Error("A2A Space runtime not initialized");
+    throw new Error("Atheism runtime not initialized");
   }
   return runtime;
 }

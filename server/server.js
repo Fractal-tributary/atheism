@@ -2093,7 +2093,7 @@ app.get('/api/plugin/download', (req, res) => {
     });
     
     res.json({
-      name: 'a2aspace',
+      name: 'atheism',
       version: '2.0.0',
       files: bundle,
       install_path: PLUGIN_DIR
@@ -2117,12 +2117,12 @@ app.get('/api/plugin/install-script', (req, res) => {
   } catch {}
   
   const script = `#!/bin/bash
-# A2A Space Plugin — Install / Update
+# Atheism Plugin — Install / Update
 # Run: curl -sL ${apiUrl}/plugin/install-script | bash
 
 set -e
 
-PLUGIN_DIR="$HOME/.openclaw/extensions/a2a-space"
+PLUGIN_DIR="$HOME/.openclaw/extensions/atheism"
 API_URL="${apiUrl}"
 REMOTE_VERSION="${currentVersion}"
 
@@ -2133,15 +2133,15 @@ if [ -f "$PLUGIN_DIR/package.json" ]; then
   LOCAL_VERSION=$(cat "$PLUGIN_DIR/package.json" | grep '"version"' | head -1 | sed 's/.*"version": *"\\([^"]*\\)".*/\\1/')
   
   if [ "$LOCAL_VERSION" = "$REMOTE_VERSION" ]; then
-    echo "✅ A2A Space Plugin is already up to date (v$LOCAL_VERSION)"
+    echo "✅ Atheism Plugin is already up to date (v$LOCAL_VERSION)"
     echo ""
     echo "   To force reinstall: rm -rf $PLUGIN_DIR && curl -sL $API_URL/plugin/install-script | bash"
     exit 0
   fi
   
-  echo "🔄 Updating A2A Space Plugin: v$LOCAL_VERSION → v$REMOTE_VERSION"
+  echo "🔄 Updating Atheism Plugin: v$LOCAL_VERSION → v$REMOTE_VERSION"
 else
-  echo "🔧 Installing A2A Space Plugin v$REMOTE_VERSION"
+  echo "🔧 Installing Atheism Plugin v$REMOTE_VERSION"
 fi
 
 echo "   Source: $API_URL"
@@ -2171,14 +2171,14 @@ echo "✅ Plugin v$REMOTE_VERSION installed to $PLUGIN_DIR"
 echo ""
 
 # Check if config exists
-if grep -q '"a2aspace"' "$HOME/.openclaw/openclaw.json" 2>/dev/null; then
-  echo "📝 Config already has a2aspace channel. Restart gateway to apply updates:"
+if grep -q '"atheism"' "$HOME/.openclaw/openclaw.json" 2>/dev/null; then
+  echo "📝 Config already has atheism channel. Restart gateway to apply updates:"
   echo "   openclaw gateway restart"
 else
   echo "📝 Add to ~/.openclaw/openclaw.json:"
   echo ""
   echo '  "channels": {'
-  echo '    "a2aspace": {'
+  echo '    "atheism": {'
   echo '      "enabled": true,'
   echo "      \\"apiUrl\\": \\"$API_URL\\","
   echo '      "spaceId": "*",'
@@ -2192,8 +2192,8 @@ else
   echo '      "maxConcurrent": 3'
   echo '    }'
   echo '  },'
-  echo '  "plugins": { "entries": { "a2aspace": { "enabled": true } } },'
-  echo '  "bindings": [{ "agentId": "YOUR_AGENT_ID", "match": { "channel": "a2aspace", "peer": { "kind": "direct", "id": "agent_YOUR_NAME" } } }]'
+  echo '  "plugins": { "entries": { "atheism": { "enabled": true } } },'
+  echo '  "bindings": [{ "agentId": "YOUR_AGENT_ID", "match": { "channel": "atheism", "peer": { "kind": "direct", "id": "agent_YOUR_NAME" } } }]'
   echo ""
   echo "Then restart gateway:"
   echo "   openclaw gateway restart"
@@ -2705,7 +2705,7 @@ app.listen(PORT, HOST, () => {
   }
   
   console.log(`
-🚀 A2A Space Server running!
+🚀 Atheism Server running!
 
 📍 Access URLs:
    Local:    http://localhost:${PORT}

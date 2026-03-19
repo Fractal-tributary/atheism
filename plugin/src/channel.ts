@@ -1,21 +1,21 @@
 import type { ChannelPlugin, ChannelMeta } from "openclaw/plugin-sdk";
 import { DEFAULT_ACCOUNT_ID } from "openclaw/plugin-sdk";
-import type { A2ASpaceAccount, A2ASpaceConfig } from "./types.js";
-import { a2aSpaceOutbound } from "./outbound.js";
+import type { AtheismAccount, AtheismConfig } from "./types.js";
+import { atheismOutbound } from "./outbound.js";
 
 const meta: ChannelMeta = {
-  id: "a2aspace",
-  label: "A2A Space",
-  selectionLabel: "A2A Space (Agent Collaboration)",
-  docsPath: "/channels/a2aspace",
-  docsLabel: "a2aspace",
-  blurb: "A2A Space REST API connector for agent-to-agent collaboration.",
+  id: "atheism",
+  label: "Atheism",
+  selectionLabel: "Atheism (Agent Collaboration)",
+  docsPath: "/channels/atheism",
+  docsLabel: "atheism",
+  blurb: "Atheism REST API connector for agent-to-agent collaboration.",
   aliases: ["a2a"],
   order: 100,
 };
 
-function resolveA2AAccount(cfg: any): A2ASpaceAccount {
-  const a2aConfig = (cfg.channels?.a2aspace ?? {}) as A2ASpaceConfig;
+function resolveA2AAccount(cfg: any): AtheismAccount {
+  const a2aConfig = (cfg.channels?.atheism ?? {}) as AtheismConfig;
 
   return {
     accountId: DEFAULT_ACCOUNT_ID,
@@ -25,8 +25,8 @@ function resolveA2AAccount(cfg: any): A2ASpaceAccount {
   };
 }
 
-export const a2aSpacePlugin: ChannelPlugin<A2ASpaceAccount> = {
-  id: "a2aspace",
+export const atheismPlugin: ChannelPlugin<AtheismAccount> = {
+  id: "atheism",
   meta: {
     ...meta,
   },
@@ -45,7 +45,7 @@ export const a2aSpacePlugin: ChannelPlugin<A2ASpaceAccount> = {
       idleMs: 800,    // 0.8 秒空闲后发送（更灵敏）
     },
   },
-  reload: { configPrefixes: ["channels.a2aspace"] },
+  reload: { configPrefixes: ["channels.atheism"] },
   configSchema: {
     schema: {
       type: "object",
@@ -90,28 +90,28 @@ export const a2aSpacePlugin: ChannelPlugin<A2ASpaceAccount> = {
       configured: account.configured,
     }),
   },
-  outbound: a2aSpaceOutbound,
+  outbound: atheismOutbound,
   gateway: {
     startAccount: async (ctx) => {
       const account = resolveA2AAccount(ctx.cfg);
 
       if (!account.configured) {
-        ctx.log?.error("a2a-space: account not configured, cannot start");
+        ctx.log?.error("atheism: account not configured, cannot start");
         return;
       }
 
-      ctx.log?.info("a2a-space: starting monitor...");
+      ctx.log?.info("atheism: starting monitor...");
 
       // 启动轮询监听
-      const { monitorA2ASpace } = await import("./monitor.js");
-      await monitorA2ASpace({
+      const { monitorAtheism } = await import("./monitor.js");
+      await monitorAtheism({
         config: ctx.cfg,
         abortSignal: ctx.abortSignal,
       });
     },
 
     stopAccount: async (ctx) => {
-      ctx.log?.info("a2a-space: stopping monitor");
+      ctx.log?.info("atheism: stopping monitor");
       // abortSignal 会自动停止轮询
     },
   },

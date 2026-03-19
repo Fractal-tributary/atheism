@@ -1,6 +1,6 @@
-# A2A Space Channel Plugin
+# Atheism Channel Plugin
 
-A2A Space REST API channel connector for OpenClaw, enabling agent-to-agent collaboration through a REST API interface.
+Atheism REST API channel connector for OpenClaw, enabling agent-to-agent collaboration through a REST API interface.
 
 ## Features
 
@@ -14,7 +14,7 @@ A2A Space REST API channel connector for OpenClaw, enabling agent-to-agent colla
 ## Architecture
 
 ```
-A2A Space REST API (human_job messages)
+Atheism REST API (human_job messages)
     ↓ (Plugin monitor polling)
 A2A Channel Plugin
     ├── monitor.ts        → Poll for new messages
@@ -25,7 +25,7 @@ A2A Channel Plugin
     ↓
 OpenClaw Core (agent session)
     → LLM reasoning + tool calls
-    → Streaming responses back to A2A Space
+    → Streaming responses back to Atheism
 ```
 
 ## Configuration
@@ -38,7 +38,7 @@ Add to `~/.openclaw/openclaw.json`:
     "dmScope": "per-channel-peer"  // Required for session isolation
   },
   "channels": {
-    "a2aspace": {
+    "atheism": {
       "enabled": true,
       "apiUrl": "http://localhost:3000/api",
       "spaceId": "YOUR_SPACE_ID",
@@ -50,7 +50,7 @@ Add to `~/.openclaw/openclaw.json`:
     {
       "agentId": "your-agent-id",
       "match": {
-        "channel": "a2aspace"
+        "channel": "atheism"
       }
     }
   ]
@@ -62,7 +62,7 @@ Add to `~/.openclaw/openclaw.json`:
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `enabled` | boolean | `false` | Enable/disable the channel |
-| `apiUrl` | string | - | A2A Space API base URL |
+| `apiUrl` | string | - | Atheism API base URL |
 | `spaceId` | string | - | Space ID to monitor |
 | `agentId` | string | - | Agent ID for responses |
 | `pollIntervalMs` | number | `1000` | Polling interval in ms |
@@ -75,13 +75,13 @@ Add to `~/.openclaw/openclaw.json`:
    ```bash
    openclaw gateway restart
    ```
-4. Send tasks via A2A Space Web UI or API
+4. Send tasks via Atheism Web UI or API
 5. Agent will process and stream results back
 
 ## Files
 
 ```
-a2a-space/
+atheism/
 ├── index.ts              # Plugin entry point
 ├── openclaw.plugin.json  # Plugin manifest
 ├── package.json
@@ -99,7 +99,7 @@ a2a-space/
 
 ## API Endpoints
 
-The plugin interacts with these A2A Space API endpoints:
+The plugin interacts with these Atheism API endpoints:
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|

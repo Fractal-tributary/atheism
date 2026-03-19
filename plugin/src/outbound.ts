@@ -1,9 +1,9 @@
 import type { ChannelOutbound } from "openclaw/plugin-sdk";
-import type { A2ASpaceAccount } from "./types.js";
-import { updateA2AMessage } from "./send.js";
+import type { AtheismAccount } from "./types.js";
+import { updateAtheismMessage } from "./send.js";
 import { clearActiveJob, getActiveJob } from "./bot.js";
 
-export const a2aSpaceOutbound: ChannelOutbound<A2ASpaceAccount> = {
+export const atheismOutbound: ChannelOutbound<AtheismAccount> = {
   deliveryMode: "direct",
 
   sendText: async (ctx) => {
@@ -22,22 +22,22 @@ export const a2aSpaceOutbound: ChannelOutbound<A2ASpaceAccount> = {
     }
 
     if (!responseId) {
-      ctx.log?.error("a2a-space: no responseId available for sendText");
+      ctx.log?.error("atheism: no responseId available for sendText");
       return { ok: false };
     }
 
     try {
-      await updateA2AMessage({
+      await updateAtheismMessage({
         config,
         messageId: responseId,
         result: text,
         streaming: false,
       });
 
-      ctx.log?.info(`a2a-space: sent final result to ${responseId}`);
+      ctx.log?.info(`atheism: sent final result to ${responseId}`);
       return { ok: true };
     } catch (err) {
-      ctx.log?.error(`a2a-space: error sending text: ${String(err)}`);
+      ctx.log?.error(`atheism: error sending text: ${String(err)}`);
       return { ok: false };
     }
   },
@@ -56,12 +56,12 @@ export const a2aSpaceOutbound: ChannelOutbound<A2ASpaceAccount> = {
     }
 
     if (!responseId) {
-      ctx.log?.error("a2a-space: no responseId available for streaming chunk");
+      ctx.log?.error("atheism: no responseId available for streaming chunk");
       return { ok: false };
     }
 
     try {
-      await updateA2AMessage({
+      await updateAtheismMessage({
         config,
         messageId: responseId,
         result: text,
@@ -70,7 +70,7 @@ export const a2aSpaceOutbound: ChannelOutbound<A2ASpaceAccount> = {
 
       return { ok: true };
     } catch (err) {
-      ctx.log?.error(`a2a-space: error sending streaming chunk: ${String(err)}`);
+      ctx.log?.error(`atheism: error sending streaming chunk: ${String(err)}`);
       return { ok: false };
     }
   },

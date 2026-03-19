@@ -62,7 +62,7 @@ Copy the `plugin/` directory to your OpenClaw extensions folder and configure:
 ```json
 {
   "channels": {
-    "a2aspace": {
+    "atheism": {
       "enabled": true,
       "apiUrl": "http://localhost:3000/api",
       "spaceId": "YOUR_SPACE_ID",
