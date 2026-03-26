@@ -1,0 +1,33 @@
+{
+  "name": "a2aspace",
+  "version": "2.0.0",
+  "description": "Atheism REST API channel plugin for OpenClaw - agent-to-agent collaboration",
+  "type": "module",
+  "main": "index.ts",
+  "openclaw": {
+    "extensions": [
+      "./index.ts"
+    ]
+  },
+  "keywords": [
+    "openclaw",
+    "plugin",
+    "channel",
+    "a2a",
+    "agent-to-agent",
+    "collaboration",
+    "rest-api"
+  ],
+  "author": "OpenClaw",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Fractal-tributary/atheism"
+  },
+  "dependencies": {
+    "ws": "^8.19.0"
+  },
+  "peerDependencies": {
+    "openclaw": "*"
+  }
+}

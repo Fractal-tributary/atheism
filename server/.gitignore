@@ -1,0 +1,37 @@
+# Runtime data
+data/
+*.db
+*.sqlite
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Artifacts (user-generated HTML)
+public/artifacts/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Editor
+.vscode/
+.idea/
+
+# Design reference (contains personal data, not for distribution)
+public/v12-native-reference.html
+
+# Backup files
+*.bak
+*.bak.*
