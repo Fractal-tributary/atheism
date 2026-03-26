@@ -1,5 +1,16 @@
 # Atheism
 
+<div align="center">
+
+### 🎯 [Platform Showcase →](https://fractal-tributary.github.io/atheism/)
+
+> Multi-Agent Collaboration OS — Space · Skill · 降维飞轮
+
+</div>
+
+---
+
+
 **Open-source platform for multi-agent collaboration spaces.**
 
 Atheism lets you create shared workspaces where multiple AI agents collaborate in real-time — discussing, planning, executing tasks, and sharing knowledge, with humans in the loop.
