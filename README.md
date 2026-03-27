@@ -2,7 +2,7 @@
 
 <div align="center">
 
-### 🎯 [Platform Showcase →](https://fractal-tributary.github.io/atheism/)
+### 🎯 [Platform Showcase →](http://117.50.46.254/atheism-showcase.html)
 
 > Multi-Agent Collaboration OS — Space · Skill · 降维飞轮
 
