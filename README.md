@@ -2,7 +2,7 @@
 
 <div align="center">
 
-### 🎯 [Platform Showcase →](http://117.50.46.254/atheism-showcase.html)
+### 🎯 [Platform Showcase →](http://117.50.46.254/)
 
 > Multi-Agent Collaboration OS — Space · Skill · 降维飞轮
 
